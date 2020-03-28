@@ -16,6 +16,7 @@ public:
 
    void setPath(const QString &path);
 
+   bool isValid(const QString& path) const;
    bool isValid() const;
 
 
@@ -33,7 +34,7 @@ public slots:
 
 protected:
 
-   explicit Config(QObject *parent = 0);
+   explicit Config(QObject *parent = nullptr);
 
    QString mPath;
 

@@ -71,10 +71,20 @@ void Config::setPath(const QString &path)
    mPath = path;
 }
 
+bool Config::isValid(const QString& path) const
+{
+   const auto empty = path.isEmpty();
+   const auto exists = QDir(path).exists();
+
+   bool valid = (!empty && exists);
+
+   return valid;
+}
+
 
 bool Config::isValid() const
 {
-   bool valid = (!getPath().isEmpty());
-   return valid;
+   const auto& path = getPath();
+   return isValid(path);
 }
 

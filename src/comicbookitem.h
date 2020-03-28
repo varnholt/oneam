@@ -1,5 +1,4 @@
-#ifndef COMICBOOKITEM_H
-#define COMICBOOKITEM_H
+#pragma once
 
 // Qt
 #include <QGraphicsPixmapItem>
@@ -28,4 +27,3 @@ protected:
       Book* mBook;
 };
 
-#endif // COMICBOOKITEM_H

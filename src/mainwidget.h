@@ -1,23 +1,22 @@
-#ifndef MAINWIDGET_H
-#define MAINWIDGET_H
+#pragma once
 
 #include <QShortcut>
-#include <QWidget>
+#include <QMainWindow>
 
 class Book;
 
 
 namespace Ui {
-class MainWidget;
+class MainWindow;
 }
 
-class MainWidget : public QWidget
+class MainWidget : public QMainWindow
 {
    Q_OBJECT
 
 public:
 
-   explicit MainWidget(QWidget *parent = 0);
+   explicit MainWidget(QWidget *parent = nullptr);
    ~MainWidget();
 
 
@@ -26,18 +25,17 @@ public slots:
    void updateBooks();
 
 
-protected slots:
+private slots:
 
    void showBook(Book*);
-
    void showPreview();
+   void action(QAction* action);
 
 
 private:
 
    QShortcut* mShortcutEscape;
 
-   Ui::MainWidget *mUi;
+   Ui::MainWindow *mUi;
 };
 
-#endif // MAINWIDGET_H

@@ -20,7 +20,7 @@ class PreviewWidget : public QWidget
 
 public:
 
-   explicit PreviewWidget(QWidget *parent = 0);
+   explicit PreviewWidget(QWidget *parent = nullptr);
 
    ~PreviewWidget();
 

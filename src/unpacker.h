@@ -23,7 +23,7 @@ public:
       TaskReadpage
    };
 
-   Unpacker(QObject* parent = 0);
+   Unpacker(QObject* parent = nullptr);
    virtual ~Unpacker();
 
    void run();

@@ -19,7 +19,7 @@ ConfigWidget::ConfigWidget(QWidget *parent) :
       mUi->mButtonGetComicBookDir,
       SIGNAL(clicked()),
       this,
-      SLOT(openFileDialogForPath())
+      SLOT(configureSearchPath())
    );
 }
 
@@ -36,17 +36,21 @@ bool ConfigWidget::isConfigValid()
 }
 
 
-void ConfigWidget::openFileDialogForPath()
+void ConfigWidget::configureSearchPath()
 {
-   QString path = QFileDialog::getExistingDirectory(
-      this,
-      tr("Enter comic book directory")
-   );
-
    Config* config = Config::getInstance();
 
-   config->setPath(path);
-   config->write();
+   QString path = QFileDialog::getExistingDirectory(
+      this,
+      tr("Enter comic book directory"),
+      config->getPath()
+   );
+
+   if (config->isValid(path))
+   {
+      config->setPath(path);
+      config->write();
+   }
 
    emit done();
 }

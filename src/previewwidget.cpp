@@ -54,12 +54,13 @@ void PreviewWidget::updateBooks()
 
 void PreviewWidget::initDirList()
 {
-   QDir dir;
-   mPath = Config::getInstance()->getPath();
-   dir.setPath(mPath);
+   mPath = QDir::toNativeSeparators(Config::getInstance()->getPath());
+   QDir dir(mPath);
+
    QStringList filters;
    filters << "*.cbr";
-   // filters << "*.cbz";
+   filters << "*.cbz";
+
    dir.setNameFilters(filters);
    mDirList = dir.entryList();
 }

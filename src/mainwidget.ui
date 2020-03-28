@@ -1,42 +1,122 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MainWidget</class>
- <widget class="QWidget" name="MainWidget">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>840</width>
-    <height>638</height>
+    <width>881</width>
+    <height>657</height>
    </rect>
   </property>
-  <property name="windowTitle">
-   <string>Form</string>
+  <property name="styleSheet">
+   <string notr="true">QWidget {
+   background-color:rgb(33, 33, 33)
+}
+
+QLabel {
+   color: rgb(177, 177, 177); 
+}
+
+QListWidget {
+   color: rgb(177, 177, 177); 
+   border: 1px solid rgb(63, 63, 63);
+}
+
+QCheckBox {
+   color: rgb(177, 177, 177); 
+   border: 1px solid rgb(63, 63, 63);
+   text-align:left;
+}
+
+QPushButton:checked {
+	background-color: rgb(80, 80, 80);
+}
+
+QPushButton {
+   color: rgb(177, 177, 177); 
+   border: 1px solid rgb(63, 63, 63);
+   text-align:left;
+}
+
+QMenuBar::item {
+   color: rgb(177, 177, 177); 
+}
+
+
+QMenu {
+   color: rgb(177, 177, 177); 
+    background-color:rgb(33, 33, 33);
+    border: 1px solid black;
+}
+
+QMenu::item {
+    background-color: transparent;
+}
+
+QMenu::item:selected { 
+    background-color: rgb(63, 63, 63);
+}
+</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
-   <property name="leftMargin">
-    <number>0</number>
+  <widget class="QWidget" name="MainWidget">
+   <property name="windowTitle">
+    <string>Form</string>
    </property>
-   <property name="topMargin">
-    <number>0</number>
+   <layout class="QGridLayout" name="gridLayout">
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <item row="0" column="0">
+     <widget class="QStackedWidget" name="mStackedWidget">
+      <widget class="PreviewWidget" name="mPreview"/>
+      <widget class="PageWidget" name="mBook"/>
+      <widget class="ConfigWidget" name="mConfig"/>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="mMenuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>881</width>
+     <height>20</height>
+    </rect>
    </property>
-   <property name="rightMargin">
-    <number>0</number>
+   <widget class="QMenu" name="mMenuConfig">
+    <property name="title">
+     <string>Config</string>
+    </property>
+    <addaction name="mConfigPath"/>
+   </widget>
+   <widget class="QMenu" name="mMenuBrowse">
+    <property name="title">
+     <string>Browse</string>
+    </property>
+   </widget>
+   <addaction name="mMenuBrowse"/>
+   <addaction name="mMenuConfig"/>
+  </widget>
+  <action name="mConfigPath">
+   <property name="text">
+    <string>Set search path</string>
    </property>
-   <property name="bottomMargin">
-    <number>0</number>
-   </property>
-   <property name="spacing">
-    <number>0</number>
-   </property>
-   <item row="0" column="0">
-    <widget class="QStackedWidget" name="mStackedWidget">
-     <widget class="PreviewWidget" name="mPreview"/>
-     <widget class="PageWidget" name="mBook"/>
-     <widget class="ConfigWidget" name="mConfig"/>
-    </widget>
-   </item>
-  </layout>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

@@ -15,7 +15,7 @@ class ConfigWidget : public QWidget
 
 public:
 
-   explicit ConfigWidget(QWidget *parent = 0);
+   explicit ConfigWidget(QWidget *parent = nullptr);
 
    ~ConfigWidget();
 
@@ -29,9 +29,7 @@ signals:
 
 public slots:
 
-protected slots:
-
-   void openFileDialogForPath();
+   void configureSearchPath();
 
 private:
 
