@@ -14,6 +14,7 @@
 
 // comicview
 #include "book.h"
+#include "config.h"
 #include "comicconstants.h"
 
 
@@ -183,7 +184,7 @@ void Unpacker::readFrontPage()
    // try cache info
    QFileInfo baseInfo(mFilename);
    QString baseName = baseInfo.baseName();
-   QFile cacheFileInfo(QString("%1/%2.txt").arg(CACHE_DIR).arg(baseName));
+   QFile cacheFileInfo(QString("%1/%2.txt").arg(Config::getCachePath()).arg(baseName));
    if (cacheFileInfo.exists())
    {
       if (cacheFileInfo.open(QFile::ReadOnly | QIODevice::Text))
@@ -243,10 +244,11 @@ void Unpacker::readFrontPage()
    mBook->setPages(files);
 
    // rewind to start and read file
-   QString desiredFile = files.at(0);
+   auto desiredFile = files.at(0);
 
    // check cache
-   QFile cacheFileImage(QString("%1/%2.jpg").arg(CACHE_DIR).arg(baseName));
+   QFile cacheFileImage(QString("%1/%2.jpg").arg(Config::getCachePath()).arg(baseName));
+
    if (cacheFileImage.exists())
    {
       if (cacheFileImage.open(QFile::ReadOnly))

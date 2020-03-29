@@ -235,11 +235,13 @@ void PageWidget::updateScrollBar()
    if (mY < mMin)
    {
       mY = mMin;
+      mDy = 0.0f;
    }
 
    if (mY > mMax)
    {
       mY = mMax;
+      mDy = 0.0f;
    }
 
    const auto value = mUi->mGraphicsView->verticalScrollBar()->value();

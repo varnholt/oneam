@@ -63,6 +63,17 @@ Config *Config::getInstance()
 const QString& Config::getPath() const
 {
    return mPath;
+
+}
+
+QString Config::getCachePath()
+{
+   const auto cachePath = QString("%1/%2/%3")
+      .arg(QDir::home().absolutePath())
+      .arg(HOME_DIR)
+      .arg(CACHE_DIR);
+
+   return cachePath;
 }
 
 

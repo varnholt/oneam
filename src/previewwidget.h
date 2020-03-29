@@ -53,9 +53,8 @@ private slots:
 
 private:
 
-   Ui::PreviewWidget *mUi;
-
-   QGraphicsScene* mScene;
+   Ui::PreviewWidget* mUi = nullptr;
+   QGraphicsScene* mScene = nullptr;
 
    QMap<QString, Book*> mBooks;
 
@@ -63,14 +62,11 @@ private:
 
    QString mPath;
 
-   int mIndex;
-
-   int mItemWidth;
-
-   int mItemHeight;
+   int mIndex = 0;
+   int mItemWidth = 0;
+   int mItemHeight = 0;
 
    QString mRequestedBook;
-   void addItem();
 };
 
 #endif // COMICWIDGET_H

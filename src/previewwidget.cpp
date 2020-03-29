@@ -18,6 +18,11 @@
 #include "comicconstants.h"
 #include "unpacker.h"
 
+namespace
+{
+   int threads = 2;
+   int itemsPerColumn = 3;
+}
 
 PreviewWidget::PreviewWidget(QWidget *parent) :
     QWidget(parent),
@@ -45,9 +50,10 @@ void PreviewWidget::scan()
       return;
    }
 
+   mIndex = 0;
+
    initDirList();
 
-   int threads = 2;
    for (auto i = 0; i < threads; i++)
    {
       processNext();
@@ -98,8 +104,6 @@ void PreviewWidget::addItem(
    const QString& filename
 )
 {
-   int itemsPerColumn = 3;
-
    auto scrollBarWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent) + 4;
    int widthWithoutScrollBar = width() - scrollBarWidth;
 

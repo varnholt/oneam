@@ -1,5 +1,4 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#pragma once
 
 #include <QSettings>
 
@@ -13,6 +12,7 @@ public:
    static Config* getInstance();
 
    const QString& getPath() const;
+   static QString getCachePath();
 
    void setPath(const QString &path);
 
@@ -22,8 +22,6 @@ public:
 
    QString getRequestedBook() const;
    void setRequestedBook(const QString &rb);
-
-signals:
 
 
 public slots:
@@ -42,5 +40,3 @@ protected:
 
    QString mRequestedBook;
 };
-
-#endif // CONFIG_H
