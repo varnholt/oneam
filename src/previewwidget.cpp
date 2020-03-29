@@ -10,6 +10,7 @@
 #include <QStyle>
 #include <QTextStream>
 #include <QThreadPool>
+#include <QTimer>
 
 // comicview
 #include "book.h"
@@ -32,6 +33,17 @@ PreviewWidget::PreviewWidget(QWidget *parent) :
    mUi->setupUi(this);
 
    mScene = new QGraphicsScene(this);
+
+   mScrollUpdateTimer = new QTimer(this);
+
+   connect(
+      mScrollUpdateTimer,
+      &QTimer::timeout,
+      this,
+      &PreviewWidget::updateScrollBar
+   );
+
+   mScrollUpdateTimer->setInterval(16);
 
    initGraphicsView();
 }
@@ -138,6 +150,8 @@ void PreviewWidget::addItem(
       row
    );
 
+   mMax = qMax((row + 1) * mItemHeight, mMax);
+
    int desiredHeight = row + mItemHeight;
    if (mUi->mGraphicsView->sceneRect().height() < desiredHeight)
    {
@@ -154,50 +168,20 @@ void PreviewWidget::addItem(
 void PreviewWidget::addPixmap()
 {
    auto unpacker = dynamic_cast<Unpacker*>(sender());
-   QPixmap pixmap;
 
-   bool valid = pixmap.loadFromData(
-      (uchar*)unpacker->getPixmap(),
-      unpacker->getPixmapSize()
-   );
-
-   if (valid)
+   if (unpacker->isValid())
    {
-      auto scaled = pixmap.scaledToWidth(mItemWidth, Qt::SmoothTransformation);
+      auto scaled = unpacker->getCover().scaledToWidth(mItemWidth, Qt::SmoothTransformation);
 
       const auto book = unpacker->getBook();
       const auto index = unpacker->getIndex();
       const auto filename = unpacker->getFilename();
 
       addItem(book, index, scaled, filename);
-
-      qDebug(
-         "file: %s, dimension: %d, %d",
-         qPrintable(unpacker->getFilename()),
-         pixmap.width(),
-         pixmap.height()
-      );
-
-      // store file in cache
-      QFileInfo fileInfo(filename);
-
-      QString cachedFilename = QString("%1/%2/%3/%4.jpg")
-            .arg(QDir::home().absolutePath())
-            .arg(HOME_DIR)
-            .arg(CACHE_DIR)
-            .arg(fileInfo.baseName()
-         );
-
-      QFile f(cachedFilename);
-      if (!f.exists())
-      {
-         scaled.save(cachedFilename);
-      }
    }
 
    unpacker->deleteLater();
 }
-
 
 
 void PreviewWidget::processNext()
@@ -233,3 +217,78 @@ void PreviewWidget::processNext()
    }
 }
 
+
+
+void PreviewWidget::keyPressEvent(QKeyEvent * e)
+{
+   if (e->isAutoRepeat())
+   {
+      return;
+   }
+
+   if (e->key() == Qt::Key_Up)
+   {
+      mDy = -SCROLL_SPEED_PAGE;
+      mScrollUpdateTimer->start();
+   }
+   else if (e->key() == Qt::Key_Down)
+   {
+      mDy = SCROLL_SPEED_PAGE;
+      mScrollUpdateTimer->start();
+   }
+}
+
+
+void PreviewWidget::keyReleaseEvent(QKeyEvent* e)
+{
+   if (e->isAutoRepeat())
+   {
+      return;
+   }
+
+   if (
+         e->key() == Qt::Key_Up
+      || e->key() == Qt::Key_Down
+   )
+   {
+      mDy = 0.0f;
+      mScrollUpdateTimer->stop();
+   }
+}
+
+
+void PreviewWidget::updateScrollBar()
+{
+   mY = mY + mDy;
+
+   if (mY < 0)
+   {
+      mY = 0;
+      mDy = 0.0f;
+   }
+
+   if (mY > mMax)
+   {
+      mY = mMax;
+      mDy = 0.0f;
+   }
+
+   const auto value = mUi->mGraphicsView->verticalScrollBar()->value();
+
+   if (static_cast<int32_t>(mY) != value)
+   {
+      mUi->mGraphicsView->verticalScrollBar()->setValue(static_cast<int32_t>(mY));
+   }
+}
+
+
+void PreviewWidget::showEvent(QShowEvent*)
+{
+   grabKeyboard();
+}
+
+
+void PreviewWidget::hideEvent(QHideEvent*)
+{
+   releaseKeyboard();
+}

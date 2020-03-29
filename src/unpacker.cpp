@@ -77,7 +77,7 @@ uchar *Unpacker::getPixmap()
 }
 
 
-int Unpacker::getPixmapSize()
+uint32_t Unpacker::getPixmapSize()
 {
    return mPixmapSize;
 }
@@ -143,6 +143,18 @@ void Unpacker::setTask(const Task &task)
 }
 
 
+const QPixmap& Unpacker::getCover() const
+{
+   return mCover;
+}
+
+
+bool Unpacker::isValid() const
+{
+   return mValid;
+}
+
+
 void Unpacker::readData(const QString &desiredFile)
 {
    while (!fex_done(mFex))
@@ -157,8 +169,8 @@ void Unpacker::readData(const QString &desiredFile)
          mPixmap = reinterpret_cast<uchar*>(const_cast<void*>(p));
          mPixmapSize = fex_size(mFex);
 
-         QImage img;
-         img.loadFromData(mPixmap, mPixmapSize);
+         // QImage img;
+         // img.loadFromData(mPixmap, mPixmapSize);
 
          break;
       }
@@ -258,7 +270,8 @@ void Unpacker::readFrontPage()
    auto desiredFile = files.at(0);
 
    // check cache
-   QFile cacheFileImage(QString("%1/%2.jpg").arg(Config::getCachePath()).arg(baseName));
+   auto cacheFilename = QString("%1/%2.jpg").arg(Config::getCachePath()).arg(baseName);
+   QFile cacheFileImage(cacheFilename);
 
    if (cacheFileImage.exists())
    {
@@ -268,6 +281,11 @@ void Unpacker::readFrontPage()
          mPixmapSize = cacheFileImage.size();
          cacheFileImage.read(reinterpret_cast<char*>(mPixmap), cacheFileImage.size());
          cacheFileImage.close();
+
+         mValid = mCover.loadFromData(
+            reinterpret_cast<uchar*>(mPixmap),
+            getPixmapSize()
+         );
       }
    }
    else
@@ -279,6 +297,14 @@ void Unpacker::readFrontPage()
          fex_rewind(mFex);
          readData(desiredFile);
       }
+
+      mValid = mCover.loadFromData(
+         reinterpret_cast<uchar*>(mPixmap),
+         getPixmapSize()
+      );
+
+      auto scaled = mCover.scaledToWidth(qMin(mCover.width(), 1000), Qt::SmoothTransformation);
+      scaled.save(cacheFilename);
    }
 }
 

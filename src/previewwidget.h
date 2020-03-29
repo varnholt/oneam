@@ -36,6 +36,14 @@ signals:
    void showBook(Book*);
 
 
+protected:
+
+   virtual void keyPressEvent(QKeyEvent *);
+   virtual void keyReleaseEvent(QKeyEvent *);
+   virtual void showEvent(QShowEvent*);
+   virtual void hideEvent(QHideEvent*);
+
+
 private slots:
 
    void processNext();
@@ -49,6 +57,8 @@ private slots:
    );
 
    void itemClicked(Book*);
+
+   void updateScrollBar();
 
 
 private:
@@ -66,6 +76,11 @@ private:
    int mItemWidth = 0;
    int mItemHeight = 0;
 
+   float mY = 0.0f;
+   float mDy = 0.0f;
+   int32_t mMax = 0;
+
+   QTimer* mScrollUpdateTimer = nullptr;
    QString mRequestedBook;
 };
 

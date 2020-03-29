@@ -32,8 +32,11 @@ public:
 protected:
 
    virtual void keyPressEvent(QKeyEvent *);
+   virtual void keyReleaseEvent(QKeyEvent *);
 
    virtual void resizeEvent(QResizeEvent*);
+   virtual void showEvent(QShowEvent*);
+   virtual void hideEvent(QHideEvent*);
 
 
 public slots:
@@ -57,6 +60,8 @@ protected:
    Ui::PageWidget *mUi = nullptr;
    QGraphicsScene* mScene = nullptr;
    Book* mBook = nullptr;
+   QTimer* mScrollUpdateTimer = nullptr;
+
    int mIndex = 0;
    int mItemWidth = 0;
    int mItemHeight = 0;

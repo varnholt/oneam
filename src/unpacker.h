@@ -2,6 +2,7 @@
 #define UNPACKER_H
 
 #include <QObject>
+#include <QPixmap>
 #include <QRunnable>
 #include <QString>
 
@@ -37,11 +38,9 @@ public:
    void readData(const QString& desiredFile);
 
 
-   // getter & setter
-
    uchar* getPixmap();
-   int getPixmapSize();
 
+   uint32_t getPixmapSize();
 
    const QString& getFilename() const;
    void setFilename(const QString &getFilename);
@@ -63,6 +62,11 @@ public:
    void setTask(const Task &getTask);
 
 
+   const QPixmap& getCover() const;
+
+   bool isValid() const;
+
+
 signals:
 
    void done();
@@ -75,10 +79,12 @@ protected:
    QString mFilename;
 
    uchar* mPixmap = nullptr;
-   int mPixmapSize = 0;
+   uint32_t mPixmapSize = 0u;
    int mIndex = 0;
    fex_t* mFex = nullptr;
    Book* mBook = nullptr;
+   QPixmap mCover;
+   bool mValid = false;
 
    QString mPage;
 };

@@ -19,12 +19,6 @@
 #include "unpacker.h"
 
 
-namespace
-{
-   const auto SPEED_STEP = 10.0f;
-   const auto SPEED_DECELERATION = 0.95f;
-}
-
 
 PageWidget::PageWidget(QWidget *parent) :
    QWidget(parent),
@@ -36,18 +30,15 @@ PageWidget::PageWidget(QWidget *parent) :
 
    initGraphicsView();
 
-   auto scrollUpdateTimer = new QTimer(this);
+   mScrollUpdateTimer = new QTimer(this);
    connect(
-      scrollUpdateTimer,
+      mScrollUpdateTimer,
       &QTimer::timeout,
       this,
       &PageWidget::updateScrollBar
    );
 
-   scrollUpdateTimer->setInterval(16);
-   scrollUpdateTimer->start();
-
-   grabKeyboard();
+   mScrollUpdateTimer->setInterval(16);
 }
 
 
@@ -120,6 +111,11 @@ void PageWidget::setIndex(int index)
 
 void PageWidget::keyPressEvent(QKeyEvent * e)
 {
+   if (e->isAutoRepeat())
+   {
+      return;
+   }
+
    if (e->key() == Qt::Key_Left)
    {
       prev();
@@ -130,25 +126,31 @@ void PageWidget::keyPressEvent(QKeyEvent * e)
    }
    else if (e->key() == Qt::Key_Up)
    {
-      if (mDy > 0.01f)
-      {
-         mDy = 0.0f;
-      }
-      else
-      {
-         mDy -= SPEED_STEP;
-      }
+      mDy = -SCROLL_SPEED_PREVIEW;
+      mScrollUpdateTimer->start();
    }
    else if (e->key() == Qt::Key_Down)
    {
-      if (mDy < -0.01f)
-      {
-         mDy = 0.0f;
-      }
-      else
-      {
-         mDy += SPEED_STEP;
-      }
+      mDy = SCROLL_SPEED_PREVIEW;
+      mScrollUpdateTimer->start();
+   }
+}
+
+
+void PageWidget::keyReleaseEvent(QKeyEvent* e)
+{
+   if (e->isAutoRepeat())
+   {
+      return;
+   }
+
+   if (
+         e->key() == Qt::Key_Up
+      || e->key() == Qt::Key_Down
+   )
+   {
+      mDy = 0.0f;
+      mScrollUpdateTimer->stop();
    }
 }
 
@@ -159,6 +161,18 @@ void PageWidget::resizeEvent(QResizeEvent * /*e*/)
    {
       load();
    }
+}
+
+
+void PageWidget::showEvent(QShowEvent*)
+{
+   grabKeyboard();
+}
+
+
+void PageWidget::hideEvent(QHideEvent*)
+{
+   releaseKeyboard();
 }
 
 
@@ -248,12 +262,8 @@ void PageWidget::updateScrollBar()
 
    if (static_cast<int32_t>(mY) != value)
    {
-      mUi->mGraphicsView->verticalScrollBar()->setValue(mY);
+      mUi->mGraphicsView->verticalScrollBar()->setValue(static_cast<int32_t>(mY));
    }
-
-   // std::cout << mDy << " " << mY << std::endl;
-
-   mDy *= SPEED_DECELERATION;
 }
 
 
