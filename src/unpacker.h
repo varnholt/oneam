@@ -70,19 +70,15 @@ signals:
 
 protected:
 
-   Task mTask;
+   Task mTask = TaskIdle;
 
    QString mFilename;
 
-   uchar* mPixmap;
-
-   int mPixmapSize;
-
-   int mIndex;
-
-   fex_t* mFex;
-
-   Book* mBook;
+   uchar* mPixmap = nullptr;
+   int mPixmapSize = 0;
+   int mIndex = 0;
+   fex_t* mFex = nullptr;
+   Book* mBook = nullptr;
 
    QString mPage;
 };

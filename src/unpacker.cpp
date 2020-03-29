@@ -17,9 +17,9 @@
 #include "comicconstants.h"
 
 
-void error( fex_err_t err )
+void error(fex_err_t err)
 {
-   if ( err != NULL )
+   if (err != nullptr)
    {
       const char* str = fex_err_str( err );
 
@@ -33,13 +33,7 @@ void error( fex_err_t err )
 
 
 Unpacker::Unpacker(QObject *parent)
- : QObject(parent),
-   mTask(TaskIdle),
-   mPixmap(0),
-   mPixmapSize(0),
-   mIndex(0),
-   mFex(0),
-   mBook(0)
+ : QObject(parent)
 {
 }
 
@@ -156,7 +150,7 @@ void Unpacker::readData(const QString &desiredFile)
          const void* p;
          error( fex_data( mFex, &p ) );
 
-         mPixmap = (uchar*)p;
+         mPixmap = reinterpret_cast<uchar*>(const_cast<void*>(p));
          mPixmapSize = fex_size(mFex);
 
          QImage img;
@@ -259,7 +253,7 @@ void Unpacker::readFrontPage()
       {
          mPixmap = new uchar[cacheFileImage.size()];
          mPixmapSize = cacheFileImage.size();
-         cacheFileImage.read((char*)mPixmap, cacheFileImage.size());
+         cacheFileImage.read(reinterpret_cast<char*>(mPixmap), cacheFileImage.size());
          cacheFileImage.close();
       }
    }

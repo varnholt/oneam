@@ -10,16 +10,15 @@
 #include "mainwidget.h"
 
 
+namespace
+{
+const auto version = "0.1";
+}
+
+
 int main(int argc, char *argv[])
 {
-   QString version = "0.1";
-
    QApplication a(argc, argv);
-
-//   QString sDir = QCoreApplication::applicationDirPath();
-//   a.addLibraryPath(sDir+"/plugins");
-//
-//   qDebug() << "Reader:" << QImageReader::supportedImageFormats();
 
    // make cache dir
    QDir cache;
@@ -56,9 +55,8 @@ int main(int argc, char *argv[])
    MainWidget w;
    w.show();
    w.setWindowTitle(QString("oneAM %1").arg(version));
-
-   int width = 650;
-   w.resize(width, width * PAGE_RATIO);
+   w.showMaximized();
+   w.scan();
 
    return a.exec();
 }

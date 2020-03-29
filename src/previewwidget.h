@@ -28,7 +28,7 @@ public:
 
    void initDirList();
 
-   void updateBooks();
+   void scan();
 
 
 signals:
@@ -36,11 +36,17 @@ signals:
    void showBook(Book*);
 
 
-protected slots:
+private slots:
 
    void processNext();
 
    void addPixmap();
+   void addItem(
+      Book* book,
+      int32_t index,
+      const QPixmap& scaled,
+      const QString& filename
+   );
 
    void itemClicked(Book*);
 
@@ -64,6 +70,7 @@ private:
    int mItemHeight;
 
    QString mRequestedBook;
+   void addItem();
 };
 
 #endif // COMICWIDGET_H

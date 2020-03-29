@@ -49,20 +49,6 @@ MainWidget::MainWidget(QWidget *parent) :
       this,
       &MainWidget::showPreview
    );
-
-   // if (!Config::getInstance()->isValid())
-   // {
-   //    mUi->mStackedWidget->setCurrentWidget(
-   //       mUi->mConfig
-   //    );
-   //
-   //    connect(
-   //       mUi->mConfig,
-   //       SIGNAL(done()),
-   //       this,
-   //       SLOT(showPreview())
-   //    );
-   // }
 }
 
 
@@ -73,9 +59,9 @@ MainWidget::~MainWidget()
 
 
 
-void MainWidget::updateBooks()
+void MainWidget::scan()
 {
-   mUi->mPreview->updateBooks();
+   mUi->mPreview->scan();
 }
 
 
@@ -93,7 +79,7 @@ void MainWidget::showPreview()
       mUi->mPreview
    );
 
-   mUi->mPreview->updateBooks();
+   mUi->mPreview->scan();
 }
 
 
@@ -105,7 +91,5 @@ void MainWidget::action(QAction* action)
       showPreview();
    }
 }
-
-
 
 

@@ -42,27 +42,30 @@ public slots:
    void showBook(Book*);
 
 
-protected slots:
+private slots:
 
    void next();
    void prev();
    void update();
+   void updateScrollBar();
 
 
 protected:
 
    void initGraphicsView();
 
-   Ui::PageWidget *mUi;
+   Ui::PageWidget *mUi = nullptr;
+   QGraphicsScene* mScene = nullptr;
+   Book* mBook = nullptr;
+   int mIndex = 0;
+   int mItemWidth = 0;
+   int mItemHeight = 0;
 
-   QGraphicsScene* mScene;
+   float mY = 0.0f;
+   float mDy = 0.0f;
+   float mMin = 0.0f;
+   float mMax = 0.0f;
 
-   Book* mBook;
-
-   int mIndex;
-
-   int mItemWidth;
-   int mItemHeight;
 };
 
 #endif // PAGEWIDGET_H

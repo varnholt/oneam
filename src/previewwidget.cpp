@@ -7,6 +7,7 @@
 #include <QGraphicsTextItem>
 #include <QMouseEvent>
 #include <QScrollBar>
+#include <QStyle>
 #include <QTextStream>
 #include <QThreadPool>
 
@@ -28,11 +29,6 @@ PreviewWidget::PreviewWidget(QWidget *parent) :
    mScene = new QGraphicsScene(this);
 
    initGraphicsView();
-
-   if (Config::getInstance()->isValid())
-   {
-      updateBooks();
-   }
 }
 
 
@@ -42,13 +38,20 @@ PreviewWidget::~PreviewWidget()
 }
 
 
-void PreviewWidget::updateBooks()
+void PreviewWidget::scan()
 {
+   if (!Config::getInstance()->isValid())
+   {
+      return;
+   }
+
    initDirList();
 
    int threads = 2;
-   for (int i = 0; i < threads; i++)
+   for (auto i = 0; i < threads; i++)
+   {
       processNext();
+   }
 }
 
 
@@ -84,18 +87,69 @@ void PreviewWidget::initGraphicsView()
    );
 
    mUi->mGraphicsView->setScene(mScene);
-
-   // set-up the view
-   mUi->mGraphicsView->setSceneRect(0, 0, 1000, 1000);
-
-   // use scrollHand drag mode to enable panning
    mUi->mGraphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
+}
+
+
+void PreviewWidget::addItem(
+   Book* book,
+   int32_t index,
+   const QPixmap& scaled,
+   const QString& filename
+)
+{
+   int itemsPerColumn = 3;
+
+   auto scrollBarWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent) + 4;
+   int widthWithoutScrollBar = width() - scrollBarWidth;
+
+   mItemWidth = (width() / static_cast<float>(itemsPerColumn)) - scrollBarWidth;
+   mItemHeight = mItemWidth * A4_ASPECT_RATIO;
+
+   ComicBookItem* item = new ComicBookItem();
+   item->setPixmap(scaled);
+   item->setBook(book);
+   mScene->addItem(item);
+   mBooks.insert(filename, book);
+
+   QFileInfo fi(filename);
+   if (fi.baseName() == Config::getInstance()->getRequestedBook())
+   {
+      emit showBook(book);
+   }
+
+   connect(
+      item,
+      SIGNAL(clicked(Book*)),
+      this,
+      SLOT(itemClicked(Book*))
+   );
+
+   // place item
+   int col = (index % itemsPerColumn) * mItemWidth;
+   int row = ((index - (index % itemsPerColumn)) / itemsPerColumn) * mItemHeight;
+
+   item->setPos(
+      col,
+      row
+   );
+
+   int desiredHeight = row + mItemHeight;
+   if (mUi->mGraphicsView->sceneRect().height() < desiredHeight)
+   {
+      mUi->mGraphicsView->setSceneRect(
+         0,
+         0,
+         widthWithoutScrollBar,
+         desiredHeight
+      );
+   }
 }
 
 
 void PreviewWidget::addPixmap()
 {
-   Unpacker* unpacker = (Unpacker*)sender();
+   auto unpacker = dynamic_cast<Unpacker*>(sender());
    QPixmap pixmap;
 
    bool valid = pixmap.loadFromData(
@@ -105,55 +159,13 @@ void PreviewWidget::addPixmap()
 
    if (valid)
    {
-      int itemsPerColumn = 3;
+      auto scaled = pixmap.scaledToWidth(mItemWidth, Qt::SmoothTransformation);
 
-      int scrollBarWidth = mUi->mGraphicsView->verticalScrollBar()->sizeHint().width();
-      int widthWithoutScrollBar = width() - scrollBarWidth;
+      const auto book = unpacker->getBook();
+      const auto index = unpacker->getIndex();
+      const auto filename = unpacker->getFilename();
 
-      mItemWidth = (int)( widthWithoutScrollBar / (float)itemsPerColumn);
-      mItemHeight = (int)(mItemWidth * PAGE_RATIO);
-      Book* book = unpacker->getBook();
-      int index = unpacker->getIndex();
-
-      QPixmap scaled = pixmap.scaledToWidth(mItemWidth, Qt::SmoothTransformation);
-      ComicBookItem* item = new ComicBookItem();
-      item->setPixmap(scaled);
-      item->setBook(book);
-      mScene->addItem(item);
-      mBooks.insert(unpacker->getFilename(), book);
-
-      QFileInfo fi(unpacker->getFilename());
-      if (fi.baseName() == Config::getInstance()->getRequestedBook())
-      {
-         emit showBook(book);
-      }
-
-      connect(
-         item,
-         SIGNAL(clicked(Book*)),
-         this,
-         SLOT(itemClicked(Book*))
-      );
-
-      // place item
-      int col = (index % itemsPerColumn) * mItemWidth;
-      int row = ((index - (index % itemsPerColumn)) / itemsPerColumn) * mItemHeight;
-
-      item->setPos(
-         col,
-         row
-      );
-
-      int desiredHeight = row + mItemHeight;
-      if (mUi->mGraphicsView->sceneRect().height() < desiredHeight)
-      {
-         mUi->mGraphicsView->setSceneRect(
-            0,
-            0,
-            widthWithoutScrollBar,
-            desiredHeight
-         );
-      }
+      addItem(book, index, scaled, filename);
 
       qDebug(
          "file: %s, dimension: %d, %d",
@@ -163,18 +175,19 @@ void PreviewWidget::addPixmap()
       );
 
       // store file in cache
-      QFileInfo fileInfo(unpacker->getFilename());
-      QString filename = QString("%1/%2/%3/%4.jpg")
+      QFileInfo fileInfo(filename);
+
+      QString cachedFilename = QString("%1/%2/%3/%4.jpg")
             .arg(QDir::home().absolutePath())
             .arg(HOME_DIR)
             .arg(CACHE_DIR)
             .arg(fileInfo.baseName()
          );
 
-      QFile f(filename);
+      QFile f(cachedFilename);
       if (!f.exists())
       {
-         scaled.save(filename);
+         scaled.save(cachedFilename);
       }
    }
 
@@ -215,28 +228,4 @@ void PreviewWidget::processNext()
       QThreadPool::globalInstance()->start(unpacker);
    }
 }
-
-
-
-/*
-
-void MyGraphicsView::wheelEvent(QWheelEvent* event) {
-
-    setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
-
-    // Scale the view / do the zoom
-    double scaleFactor = 1.15;
-    if(event->delta() > 0) {
-        // Zoom in
-        scale(scaleFactor, scaleFactor);
-    } else {
-        // Zooming out
-        scale(1.0 / scaleFactor, 1.0 / scaleFactor);
-    }
-
-    // Don't call superclass handler here
-    // as wheel is normally used for moving scrollbars
-}
-*/
-
 

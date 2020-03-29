@@ -22,7 +22,7 @@ public:
 
 public slots:
 
-   void updateBooks();
+   void scan();
 
 
 private slots:

@@ -5,7 +5,13 @@
 // Qt
 #include <QGraphicsPixmapItem>
 #include <QKeyEvent>
+#include <QScrollBar>
+#include <QStyle>
 #include <QThreadPool>
+#include <QTimer>
+
+// stl
+#include <iostream>
 
 // comicview
 #include "book.h"
@@ -13,18 +19,33 @@
 #include "unpacker.h"
 
 
+namespace
+{
+   const auto SPEED_STEP = 10.0f;
+   const auto SPEED_DECELERATION = 0.95f;
+}
+
+
 PageWidget::PageWidget(QWidget *parent) :
    QWidget(parent),
-   mUi(new Ui::PageWidget),
-   mScene(0),
-   mBook(0),
-   mIndex(0)
+   mUi(new Ui::PageWidget)
 {
    mUi->setupUi(this);
 
    mScene = new QGraphicsScene(this);
 
    initGraphicsView();
+
+   auto scrollUpdateTimer = new QTimer(this);
+   connect(
+      scrollUpdateTimer,
+      &QTimer::timeout,
+      this,
+      &PageWidget::updateScrollBar
+   );
+
+   scrollUpdateTimer->setInterval(16);
+   scrollUpdateTimer->start();
 
    grabKeyboard();
 }
@@ -37,11 +58,6 @@ void PageWidget::initGraphicsView()
    );
 
    mUi->mGraphicsView->setScene(mScene);
-
-   // set-up the view
-   mUi->mGraphicsView->setSceneRect(0, 0, 1000, 1000);
-
-   // use scrollHand drag mode to enable panning
    mUi->mGraphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
 }
 
@@ -96,7 +112,9 @@ void PageWidget::setIndex(int index)
    mIndex = index;
 
    if (changed)
+   {
       load();
+   }
 }
 
 
@@ -110,20 +128,46 @@ void PageWidget::keyPressEvent(QKeyEvent * e)
    {
       next();
    }
+   else if (e->key() == Qt::Key_Up)
+   {
+      if (mDy > 0.01f)
+      {
+         mDy = 0.0f;
+      }
+      else
+      {
+         mDy -= SPEED_STEP;
+      }
+   }
+   else if (e->key() == Qt::Key_Down)
+   {
+      if (mDy < -0.01f)
+      {
+         mDy = 0.0f;
+      }
+      else
+      {
+         mDy += SPEED_STEP;
+      }
+   }
 }
 
 
-void PageWidget::resizeEvent(QResizeEvent * e)
+void PageWidget::resizeEvent(QResizeEvent * /*e*/)
 {
    if (mBook)
+   {
       load();
+   }
 }
 
 
 void PageWidget::next()
 {
    if (!mBook)
+   {
       return;
+   }
 
    setIndex(qMin(mBook->getPageCount() - 1, mIndex + 1));
 }
@@ -132,7 +176,9 @@ void PageWidget::next()
 void PageWidget::prev()
 {
    if (!mBook)
+   {
       return;
+   }
 
    setIndex(qMax(0, mIndex - 1));
 }
@@ -140,32 +186,72 @@ void PageWidget::prev()
 
 void PageWidget::update()
 {
-   Unpacker* unpacker = (Unpacker*)sender();
+   auto unpacker = dynamic_cast<Unpacker*>(sender());
 
    QPixmap pixmap;
 
    bool valid = pixmap.loadFromData(
-      (uchar*)unpacker->getPixmap(),
-      unpacker->getPixmapSize()
+      static_cast<uchar*>(unpacker->getPixmap()),
+      static_cast<uint32_t>(unpacker->getPixmapSize())
    );
 
    if (valid)
    {
       mScene->clear();
 
-      mItemWidth = width(); // (int)( widthWithoutScrollBar / (float)itemsPerColumn);
-      mItemHeight = (int)(mItemWidth * PAGE_RATIO);
+      auto scrollBarWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent) + 4;
+
+      mItemWidth = width() - scrollBarWidth;
+      mItemHeight = static_cast<int32_t>(mItemWidth * A4_ASPECT_RATIO);
+
+      mUi->mGraphicsView->setSceneRect(
+         0,
+         0,
+         mItemWidth,
+         mItemHeight
+      );
 
       QPixmap scaled = pixmap.scaledToWidth(mItemWidth, Qt::SmoothTransformation);
 
       QGraphicsPixmapItem* item = new QGraphicsPixmapItem();
       item->setPixmap(scaled);
       item->setPos(0, 0);
-      mScene->addItem(item);
 
+      mScene->addItem(item);
    }
 
    unpacker->deleteLater();
+
+   mDy = 0.0f;
+   mY = 0.0f;
+   mMax = mUi->mGraphicsView->verticalScrollBar()->maximum();
+}
+
+
+void PageWidget::updateScrollBar()
+{
+   mY = mY + mDy;
+
+   if (mY < mMin)
+   {
+      mY = mMin;
+   }
+
+   if (mY > mMax)
+   {
+      mY = mMax;
+   }
+
+   const auto value = mUi->mGraphicsView->verticalScrollBar()->value();
+
+   if (static_cast<int32_t>(mY) != value)
+   {
+      mUi->mGraphicsView->verticalScrollBar()->setValue(mY);
+   }
+
+   // std::cout << mDy << " " << mY << std::endl;
+
+   mDy *= SPEED_DECELERATION;
 }
 
 
@@ -177,3 +263,4 @@ void PageWidget::showBook(Book * book)
    setIndex(0);
    load();
 }
+
