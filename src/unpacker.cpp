@@ -22,13 +22,16 @@ void error(fex_err_t err)
 {
    if (err != nullptr)
    {
-      const char* str = fex_err_str( err );
+      const char* str = fex_err_str(err);
 
       // log errors
       QFile errorFile("error.log");
       errorFile.open(QFile::Append);
+
       QTextStream debugOut(&errorFile);
       debugOut << str << "\n";
+
+      qDebug("error: %s", qPrintable(str));
    }
 }
 
@@ -43,7 +46,7 @@ Unpacker::~Unpacker()
 {
    if (mFex)
    {
-      fex_close( mFex );
+      fex_close(mFex);
    }
 }
 
@@ -142,7 +145,7 @@ void Unpacker::setTask(const Task &task)
 
 void Unpacker::readData(const QString &desiredFile)
 {
-   while ( !fex_done( mFex ) )
+   while (!fex_done(mFex))
    {
       const char* filename = fex_name(mFex);
 
@@ -160,23 +163,28 @@ void Unpacker::readData(const QString &desiredFile)
          break;
       }
 
-      error( fex_next( mFex ) );
+      error(fex_next(mFex));
    }
 }
 
 
 void Unpacker::openFile()
 {
-   error(fex_open( &mFex, qPrintable(mFilename)));
+//   if (mFilename.toLower().endsWith("cbz"))
+//   {
+//      fex_type_t zip_type = fex_identify_extension(".zip");
+//      error(fex_open_type(&mFex, qPrintable(mFilename), zip_type));
+//   }
+//   else
+   {
+      error(fex_open(&mFex, qPrintable(mFilename)));
+   }
 }
 
 
 void Unpacker::readFrontPage()
 {
-   qDebug(
-      "processing file: %s",
-      qPrintable(mFilename)
-   );
+   qDebug("processing file: %s", qPrintable(mFilename));
 
    // read archive contents
    QStringList files;
@@ -184,6 +192,7 @@ void Unpacker::readFrontPage()
    // try cache info
    QFileInfo baseInfo(mFilename);
    QString baseName = baseInfo.baseName();
+
    QFile cacheFileInfo(QString("%1/%2.txt").arg(Config::getCachePath()).arg(baseName));
    if (cacheFileInfo.exists())
    {
@@ -220,7 +229,9 @@ void Unpacker::readFrontPage()
 
          // nothing to do if no files in there
          if (files.isEmpty())
+         {
             return;
+         }
 
          // sort and pick the 1st file afterwards
          qSort(files);
