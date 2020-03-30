@@ -56,18 +56,24 @@ void Unpacker::run()
    switch (mTask)
    {
       case TaskReadFrontPage:
+      {
          readFrontPage();
          break;
+      }
 
       case TaskReadpage:
+      {
          readPage();
          break;
+      }
 
       default:
+      {
          break;
+      }
    }
 
-    emit done();
+   emit done();
 }
 
 
@@ -167,7 +173,7 @@ void Unpacker::readData(const QString &desiredFile)
          error( fex_data( mFex, &p ) );
 
          mPixmap = reinterpret_cast<uchar*>(const_cast<void*>(p));
-         mPixmapSize = fex_size(mFex);
+         mPixmapSize = static_cast<uint32_t>(fex_size(mFex));
 
          // QImage img;
          // img.loadFromData(mPixmap, mPixmapSize);
@@ -306,6 +312,8 @@ void Unpacker::readFrontPage()
       auto scaled = mCover.scaledToWidth(qMin(mCover.width(), 1000), Qt::SmoothTransformation);
       scaled.save(cacheFilename);
    }
+
+   // qDebug("done processing file: %s, %d", qPrintable(mFilename), cacheFileImage.size());
 }
 
 

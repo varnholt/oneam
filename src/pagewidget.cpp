@@ -126,12 +126,12 @@ void PageWidget::keyPressEvent(QKeyEvent * e)
    }
    else if (e->key() == Qt::Key_Up)
    {
-      mDy = -SCROLL_SPEED_PREVIEW;
+      mDy = -SCROLL_SPEED_PAGE;
       mScrollUpdateTimer->start();
    }
    else if (e->key() == Qt::Key_Down)
    {
-      mDy = SCROLL_SPEED_PREVIEW;
+      mDy = SCROLL_SPEED_PAGE;
       mScrollUpdateTimer->start();
    }
 }

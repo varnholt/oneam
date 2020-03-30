@@ -1,5 +1,4 @@
-#ifndef UNPACKER_H
-#define UNPACKER_H
+#pragma once
 
 #include <QObject>
 #include <QPixmap>
@@ -7,7 +6,7 @@
 #include <QString>
 
 
-class fex_t;
+struct fex_t;
 class Book;
 
 class Unpacker : public QObject, public QRunnable
@@ -89,4 +88,3 @@ protected:
    QString mPage;
 };
 
-#endif // UNPACKER_H

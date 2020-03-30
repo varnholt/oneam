@@ -21,8 +21,8 @@
 
 namespace
 {
-   int threads = 2;
-   int itemsPerColumn = 3;
+   static const auto threads = 1;
+   static const auto itemsPerColumn = 3;
 }
 
 PreviewWidget::PreviewWidget(QWidget *parent) :
@@ -116,23 +116,25 @@ void PreviewWidget::addItem(
    const QString& filename
 )
 {
-   auto scrollBarWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent) + 4;
-   int widthWithoutScrollBar = width() - scrollBarWidth;
+   const auto scrollBarWidth = qApp->style()->pixelMetric(QStyle::PM_ScrollBarExtent) + 4;
+   const auto widthWithoutScrollBar = width() - scrollBarWidth;
 
-   mItemWidth = (width() / static_cast<float>(itemsPerColumn)) - scrollBarWidth;
-   mItemHeight = mItemWidth * A4_ASPECT_RATIO;
+   // place item
+   const auto col = (index % itemsPerColumn) * mItemWidth;
+   const auto row = ((index - (index % itemsPerColumn)) / itemsPerColumn) * mItemHeight;
+
+   mItemWidth = static_cast<int32_t>((width() / static_cast<float>(itemsPerColumn)) - scrollBarWidth);
+   mItemHeight = static_cast<int32_t>(mItemWidth * A4_ASPECT_RATIO);
+
+   mMax = qMax((row + 1) * mItemHeight, mMax);
 
    ComicBookItem* item = new ComicBookItem();
    item->setPixmap(scaled);
    item->setBook(book);
+   item->setPos(col, row);
+
    mScene->addItem(item);
    mBooks.insert(filename, book);
-
-   QFileInfo fi(filename);
-   if (fi.baseName() == Config::getInstance()->getRequestedBook())
-   {
-      emit showBook(book);
-   }
 
    connect(
       item,
@@ -141,18 +143,7 @@ void PreviewWidget::addItem(
       SLOT(itemClicked(Book*))
    );
 
-   // place item
-   int col = (index % itemsPerColumn) * mItemWidth;
-   int row = ((index - (index % itemsPerColumn)) / itemsPerColumn) * mItemHeight;
-
-   item->setPos(
-      col,
-      row
-   );
-
-   mMax = qMax((row + 1) * mItemHeight, mMax);
-
-   int desiredHeight = row + mItemHeight;
+   const auto desiredHeight = row + mItemHeight;
    if (mUi->mGraphicsView->sceneRect().height() < desiredHeight)
    {
       mUi->mGraphicsView->setSceneRect(
@@ -161,6 +152,12 @@ void PreviewWidget::addItem(
          widthWithoutScrollBar,
          desiredHeight
       );
+   }
+
+   QFileInfo fi(filename);
+   if (fi.baseName() == Config::getInstance()->getRequestedBook())
+   {
+      emit showBook(book);
    }
 }
 
@@ -228,12 +225,12 @@ void PreviewWidget::keyPressEvent(QKeyEvent * e)
 
    if (e->key() == Qt::Key_Up)
    {
-      mDy = -SCROLL_SPEED_PAGE;
+      mDy = -SCROLL_SPEED_PREVIEW;
       mScrollUpdateTimer->start();
    }
    else if (e->key() == Qt::Key_Down)
    {
-      mDy = SCROLL_SPEED_PAGE;
+      mDy = SCROLL_SPEED_PREVIEW;
       mScrollUpdateTimer->start();
    }
 }
