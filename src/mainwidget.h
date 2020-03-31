@@ -30,12 +30,15 @@ private slots:
    void showBook(Book*);
    void showPreview();
    void action(QAction* action);
+   void toggleFullscreen();
 
 
 private:
 
-   QShortcut* mShortcutEscape;
+   QShortcut* mShortcutEscape = nullptr;
+   QShortcut* mShortcutFullscreen = nullptr;
 
    Ui::MainWindow *mUi;
+   bool mFullscreen = false;
 };
 

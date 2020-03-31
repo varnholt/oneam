@@ -13,6 +13,9 @@ MainWidget::MainWidget(QWidget *parent) :
    mShortcutEscape = new QShortcut(this);
    mShortcutEscape->setKey(Qt::Key_Escape);
 
+   mShortcutFullscreen = new QShortcut(this);
+   mShortcutFullscreen->setKey(Qt::Key_F11);
+
    connect(
       mUi->mPreview,
       SIGNAL(showBook(Book*)),
@@ -29,9 +32,16 @@ MainWidget::MainWidget(QWidget *parent) :
 
    connect(
       mShortcutEscape,
-      SIGNAL(activated()),
+      &QShortcut::activated,
       this,
-      SLOT(showPreview())
+      &MainWidget::showPreview
+   );
+
+   connect(
+      mShortcutFullscreen,
+      &QShortcut::activated,
+      this,
+      &MainWidget::toggleFullscreen
    );
 
    // menubar
@@ -42,13 +52,13 @@ MainWidget::MainWidget(QWidget *parent) :
       &MainWidget::action
    );
 
-   // menubar
-   connect(
-      mUi->mMenuBrowse,
-      &QMenu::aboutToShow,
-      this,
-      &MainWidget::showPreview
-   );
+//   // menubar
+//   connect(
+//      mUi->mMenuBrowse,
+//      &QMenu::aboutToShow,
+//      this,
+//      &MainWidget::showPreview
+//   );
 }
 
 
@@ -89,6 +99,29 @@ void MainWidget::action(QAction* action)
    {
       mUi->mConfig->configureSearchPath();
       showPreview();
+   }
+   else if (action == mUi->mFullscreen)
+   {
+      toggleFullscreen();
+   }
+   else if (action == mUi->mBrowse)
+   {
+      showPreview();
+   }
+}
+
+
+void MainWidget::toggleFullscreen()
+{
+   mFullscreen = !mFullscreen;
+
+   if (mFullscreen)
+   {
+      showFullScreen();
+   }
+   else
+   {
+      showNormal();
    }
 }
 
