@@ -51,14 +51,6 @@ MainWidget::MainWidget(QWidget *parent) :
       this,
       &MainWidget::action
    );
-
-//   // menubar
-//   connect(
-//      mUi->mMenuBrowse,
-//      &QMenu::aboutToShow,
-//      this,
-//      &MainWidget::showPreview
-//   );
 }
 
 

@@ -122,12 +122,12 @@ QMenu::item:selected {
   </widget>
   <action name="mConfigPath">
    <property name="text">
-    <string>Set search path</string>
+    <string>Search path</string>
    </property>
   </action>
   <action name="mBrowse">
    <property name="text">
-    <string>Browse comic books</string>
+    <string>Browse</string>
    </property>
   </action>
   <action name="mFullscreen">
