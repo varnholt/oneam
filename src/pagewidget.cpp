@@ -76,8 +76,8 @@ void PageWidget::load()
 {
    Unpacker* unpacker = new Unpacker();
    unpacker->setTask(Unpacker::TaskReadpage);
-   unpacker->setFilename(mBook->getFilename());
-   unpacker->setPage(mBook->getPages().at(getIndex()));
+   unpacker->setFilename(mBook->mFilename);
+   unpacker->setPage(0); // mBook->mPages.at(getIndex())
    unpacker->setAutoDelete(false);
    QThreadPool::globalInstance()->start(unpacker);
 
@@ -183,7 +183,7 @@ void PageWidget::next()
       return;
    }
 
-   setIndex(qMin(mBook->getPageCount() - 1, mIndex + 1));
+   setIndex(qMin(mBook->mPages.size() - 1, mIndex + 1));
 }
 
 
@@ -205,7 +205,7 @@ void PageWidget::update()
    QPixmap pixmap;
 
    bool valid = pixmap.loadFromData(
-      static_cast<uchar*>(unpacker->getPixmap()),
+      const_cast<uchar*>(unpacker->getPixmap().data()),
       static_cast<uint32_t>(unpacker->getPixmapSize())
    );
 

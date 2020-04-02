@@ -9,31 +9,16 @@
 #include <QPixmap>
 #include <QTextStream>
 
-// fex
-#include "fex.h"
+#include <iostream>
 
 // comicview
 #include "book.h"
 #include "config.h"
 #include "comicconstants.h"
 
-
-void error(fex_err_t err)
-{
-   if (err != nullptr)
-   {
-      const char* str = fex_err_str(err);
-
-      // log errors
-      QFile errorFile("error.log");
-      errorFile.open(QFile::Append);
-
-      QTextStream debugOut(&errorFile);
-      debugOut << str << "\n";
-
-      qDebug("error: %s", qPrintable(str));
-   }
-}
+#include "bitarchiveinfo.hpp"
+#include "bitextractor.hpp"
+#include "bitexception.hpp"
 
 
 Unpacker::Unpacker(QObject *parent)
@@ -41,14 +26,6 @@ Unpacker::Unpacker(QObject *parent)
 {
 }
 
-
-Unpacker::~Unpacker()
-{
-   if (mFex)
-   {
-      fex_close(mFex);
-   }
-}
 
 
 void Unpacker::run()
@@ -77,15 +54,15 @@ void Unpacker::run()
 }
 
 
-uchar *Unpacker::getPixmap()
+const std::vector<uint8_t>& Unpacker::getPixmap()
 {
-   return mPixmap;
+   return mData;
 }
 
 
-uint32_t Unpacker::getPixmapSize()
+size_t Unpacker::getPixmapSize()
 {
-   return mPixmapSize;
+   return mData.size();
 }
 
 
@@ -125,13 +102,13 @@ void Unpacker::setBook(Book *book)
 }
 
 
-const QString& Unpacker::getPage() const
+int32_t Unpacker::getPage() const
 {
    return mPage;
 }
 
 
-void Unpacker::setPage(const QString &page)
+void Unpacker::setPage(int32_t page)
 {
    mPage = page;
 }
@@ -161,42 +138,53 @@ bool Unpacker::isValid() const
 }
 
 
-void Unpacker::readData(const QString &desiredFile)
+void Unpacker::readData(int32_t page = 0)
 {
-   while (!fex_done(mFex))
+   std::cout << "reading page " << page << " from " << mFilename.toStdString() << std::endl;
+
+   try
    {
-      const char* filename = fex_name(mFex);
+      bit7z::Bit7zLibrary lib{L"7z.dll"};
+      bit7z::BitExtractor extractor{ lib, bit7z::BitFormat::Rar };
 
-      if (desiredFile == filename)
-      {
-         const void* p;
-         error( fex_data( mFex, &p ) );
-
-         mPixmap = reinterpret_cast<uchar*>(const_cast<void*>(p));
-         mPixmapSize = static_cast<uint32_t>(fex_size(mFex));
-
-         // QImage img;
-         // img.loadFromData(mPixmap, mPixmapSize);
-
-         break;
-      }
-
-      error(fex_next(mFex));
+      extractor.extract(mFilename.toStdWString(), mData, page);
+   }
+   catch (const bit7z::BitException& ex)
+   {
+      std::cout << ex.what() << std::endl;
    }
 }
 
 
-void Unpacker::openFile()
+QStringList Unpacker::getArchiveContents(const QString& desiredFile)
 {
-//   if (mFilename.toLower().endsWith("cbz"))
-//   {
-//      fex_type_t zip_type = fex_identify_extension(".zip");
-//      error(fex_open_type(&mFex, qPrintable(mFilename), zip_type));
-//   }
-//   else
+   QStringList files;
+
+   bit7z::Bit7zLibrary lib{L"7z.dll"};
+   bit7z::BitArchiveInfo arc{ lib, desiredFile.toStdWString(), bit7z::BitFormat::Rar };
+
+   try
    {
-      error(fex_open(&mFex, qPrintable(mFilename)));
+      auto arc_items = arc.items();
+      for ( auto& item : arc_items )
+      {
+         if (
+               item.extension() == L".jpg"
+            || item.extension() == L".png"
+         )
+         {
+            files << QString::fromStdWString(item.name());
+         }
+
+         std::cout << item.name().c_str() << std::endl;
+      }
    }
+   catch (const bit7z::BitException& ex)
+   {
+      std::cout << ex.what() << std::endl;
+   }
+
+   return files;
 }
 
 
@@ -226,54 +214,36 @@ void Unpacker::readFrontPage()
    }
    else
    {
-      openFile();
+      files = getArchiveContents(mFilename);
 
-      if (mFex)
+      // nothing to do if no files in there
+      if (files.isEmpty())
       {
-         while ( !fex_done( mFex ) )
+         return;
+      }
+
+      // sort and pick the 1st file afterwards
+      qSort(files);
+
+      if (cacheFileInfo.open(QIODevice::WriteOnly | QIODevice::Text))
+      {
+         QTextStream out(&cacheFileInfo);
+         foreach (const QString& file, files)
          {
-            const char* filename = fex_name(mFex);
-
-            if (
-                  fex_has_extension( filename, ".jpg" )
-               || fex_has_extension( filename, ".png" )
-            )
-            {
-               files << filename;
-            }
-
-            error( fex_next( mFex ) );
+            out << file << "\n";
          }
 
-         // nothing to do if no files in there
-         if (files.isEmpty())
-         {
-            return;
-         }
-
-         // sort and pick the 1st file afterwards
-         qSort(files);
-
-         if (cacheFileInfo.open(QIODevice::WriteOnly | QIODevice::Text))
-         {
-            QTextStream out(&cacheFileInfo);
-            foreach (const QString& file, files)
-            {
-               out << file << "\n";
-            }
-
-            cacheFileInfo.close();
-         }
+         cacheFileInfo.close();
       }
    }
 
    // store book information
    mBook = new Book();
-   mBook->setFilename(mFilename);
-   mBook->setPages(files);
+   mBook->mFilename = mFilename;
+   mBook->mPages = files;
 
    // rewind to start and read file
-   auto desiredFile = files.at(0);
+   // auto desiredFile = files.at(0);
 
    // check cache
    auto cacheFilename = QString("%1/%2.jpg").arg(Config::getCachePath()).arg(baseName);
@@ -283,43 +253,35 @@ void Unpacker::readFrontPage()
    {
       if (cacheFileImage.open(QFile::ReadOnly))
       {
-         mPixmap = new uchar[cacheFileImage.size()];
-         mPixmapSize = cacheFileImage.size();
-         cacheFileImage.read(reinterpret_cast<char*>(mPixmap), cacheFileImage.size());
+         mData.resize(static_cast<size_t>(cacheFileImage.size()));
+
+         cacheFileImage.read(reinterpret_cast<char*>(mData.data()), cacheFileImage.size());
          cacheFileImage.close();
 
          mValid = mCover.loadFromData(
-            reinterpret_cast<uchar*>(mPixmap),
-            getPixmapSize()
+            reinterpret_cast<uchar*>(mData.data()),
+            static_cast<uint32_t>(getPixmapSize())
          );
       }
    }
    else
    {
-      openFile();
-
-      if (mFex)
-      {
-         fex_rewind(mFex);
-         readData(desiredFile);
-      }
+      readData();
 
       mValid = mCover.loadFromData(
-         reinterpret_cast<uchar*>(mPixmap),
-         getPixmapSize()
+         reinterpret_cast<uchar*>(mData.data()),
+         static_cast<uint32_t>(getPixmapSize())
       );
 
       auto scaled = mCover.scaledToWidth(qMin(mCover.width(), 1000), Qt::SmoothTransformation);
       scaled.save(cacheFilename);
    }
-
-   // qDebug("done processing file: %s, %d", qPrintable(mFilename), cacheFileImage.size());
 }
 
 
 void Unpacker::readPage()
 {
-   openFile();
-   readData(getPage());
+   readData(mPage);
 }
+
 

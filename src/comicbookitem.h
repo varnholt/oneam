@@ -3,7 +3,7 @@
 // Qt
 #include <QGraphicsPixmapItem>
 
-class Book;
+struct Book;
 
 class ComicBookItem : public QObject, public QGraphicsPixmapItem
 {

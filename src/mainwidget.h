@@ -3,7 +3,7 @@
 #include <QShortcut>
 #include <QMainWindow>
 
-class Book;
+struct Book;
 
 
 namespace Ui {

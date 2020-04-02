@@ -1,11 +1,10 @@
-#ifndef PREVIEWWIDGET_H
-#define PREVIEWWIDGET_H
+#pragma once
 
 #include <QMap>
 #include <QWidget>
 
 
-class Book;
+struct Book;
 class QGraphicsScene;
 class QGraphicsItem;
 
@@ -84,4 +83,3 @@ private:
    QString mRequestedBook;
 };
 
-#endif // COMICWIDGET_H

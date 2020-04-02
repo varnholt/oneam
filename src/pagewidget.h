@@ -1,9 +1,8 @@
-#ifndef PAGEWIDGET_H
-#define PAGEWIDGET_H
+#pragma once
 
 #include <QWidget>
 
-class Book;
+struct Book;
 class QGraphicsScene;
 
 namespace Ui {
@@ -73,4 +72,3 @@ protected:
 
 };
 
-#endif // PAGEWIDGET_H

@@ -6,8 +6,7 @@
 #include <QString>
 
 
-struct fex_t;
-class Book;
+struct Book;
 
 class Unpacker : public QObject, public QRunnable
 {
@@ -24,7 +23,6 @@ public:
    };
 
    Unpacker(QObject* parent = nullptr);
-   virtual ~Unpacker();
 
    void run();
 
@@ -33,13 +31,11 @@ public:
    void readPage();
 
    // archive operations
-   void openFile();
-   void readData(const QString& desiredFile);
+   void readData(int32_t page);
+   QStringList getArchiveContents(const QString& desiredFile);
 
-
-   uchar* getPixmap();
-
-   uint32_t getPixmapSize();
+   const std::vector<uint8_t>& getPixmap();
+   size_t getPixmapSize();
 
    const QString& getFilename() const;
    void setFilename(const QString &getFilename);
@@ -53,8 +49,8 @@ public:
    void setBook(Book* getBook);
 
 
-   const QString &getPage() const;
-   void setPage(const QString &getPage);
+   int32_t getPage() const;
+   void setPage(int32_t getPage);
 
 
    Task getTask() const;
@@ -77,14 +73,13 @@ protected:
 
    QString mFilename;
 
-   uchar* mPixmap = nullptr;
-   uint32_t mPixmapSize = 0u;
+   std::vector<uint8_t> mData;
+
    int mIndex = 0;
-   fex_t* mFex = nullptr;
    Book* mBook = nullptr;
    QPixmap mCover;
    bool mValid = false;
 
-   QString mPage;
+   int32_t mPage = 0;
 };
 

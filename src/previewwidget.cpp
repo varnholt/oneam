@@ -91,7 +91,7 @@ void PreviewWidget::itemClicked(Book* book)
 {
    if (book)
    {
-      qDebug("book clicked: %s", qPrintable(book->getFilename()));
+      qDebug("book clicked: %s", qPrintable(book->mFilename));
 
       emit showBook(book);
    }
