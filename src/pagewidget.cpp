@@ -183,7 +183,10 @@ void PageWidget::next()
       return;
    }
 
-   setIndex(qMin(mBook->mPages.size() - 1, mIndex + 1));
+   const auto last = static_cast<int32_t>(mBook->mPages.size() - 1);
+   const auto next = mIndex + 1;
+
+   setIndex(std::min(last, next));
 }
 
 

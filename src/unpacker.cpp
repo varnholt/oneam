@@ -147,7 +147,11 @@ void Unpacker::readData(int32_t page = 0)
       bit7z::Bit7zLibrary lib{L"7z.dll"};
       bit7z::BitExtractor extractor{ lib, bit7z::BitFormat::Rar };
 
-      extractor.extract(mFilename.toStdWString(), mData, page);
+      extractor.extract(
+         mFilename.toStdWString(),
+         mData,
+         static_cast<uint32_t>(page)
+      );
    }
    catch (const bit7z::BitException& ex)
    {
@@ -156,27 +160,35 @@ void Unpacker::readData(int32_t page = 0)
 }
 
 
-QStringList Unpacker::getArchiveContents(const QString& desiredFile)
+std::vector<Page> Unpacker::getArchiveContents(const QString& desiredFile)
 {
-   QStringList files;
-
-   bit7z::Bit7zLibrary lib{L"7z.dll"};
-   bit7z::BitArchiveInfo arc{ lib, desiredFile.toStdWString(), bit7z::BitFormat::Rar };
+   std::vector<Page> pages;
 
    try
    {
-      auto arc_items = arc.items();
-      for ( auto& item : arc_items )
+      bit7z::Bit7zLibrary lib{L"7z.dll"};
+      bit7z::BitArchiveInfo arc{lib, desiredFile.toStdWString(), bit7z::BitFormat::Rar};
+
+      const auto& items = arc.items();
+
+      for (auto& item : items)
       {
+         const auto& extension = item.extension();
+         const auto& name = item.name();
+         const auto& path = item.path();
+
+         std::wcout << "name: " << name << " path: " << path << " ext: " << extension << std::endl;
+
          if (
-               item.extension() == L".jpg"
-            || item.extension() == L".png"
+               item.extension() == L"jpg"
+            || item.extension() == L"png"
          )
          {
-            files << QString::fromStdWString(item.name());
+            Page p;
+            p.mFilename = QString::fromStdWString(item.name());
+            p.mFileIndex = static_cast<int32_t>(item.index());
+            pages.push_back(p);
          }
-
-         std::cout << item.name().c_str() << std::endl;
       }
    }
    catch (const bit7z::BitException& ex)
@@ -184,7 +196,7 @@ QStringList Unpacker::getArchiveContents(const QString& desiredFile)
       std::cout << ex.what() << std::endl;
    }
 
-   return files;
+   return pages;
 }
 
 
@@ -193,7 +205,7 @@ void Unpacker::readFrontPage()
    qDebug("processing file: %s", qPrintable(mFilename));
 
    // read archive contents
-   QStringList files;
+   std::vector<Page> pages;
 
    // try cache info
    QFileInfo baseInfo(mFilename);
@@ -205,32 +217,42 @@ void Unpacker::readFrontPage()
       if (cacheFileInfo.open(QFile::ReadOnly | QIODevice::Text))
       {
          QTextStream in(&cacheFileInfo);
+
          while (!in.atEnd())
          {
-            QString line = in.readLine();
-            files << line;
+            const auto contents = in.readLine().split(";");
+
+            const auto fileIndex = contents.at(0).toInt();
+            const auto filename = contents.at(1);
+
+            Page page;
+
+            page.mFilename = filename;
+            page.mFileIndex = fileIndex;
+
+            pages.push_back(page);
          }
       }
    }
    else
    {
-      files = getArchiveContents(mFilename);
+      pages = getArchiveContents(mFilename);
 
       // nothing to do if no files in there
-      if (files.isEmpty())
+      if (pages.empty())
       {
          return;
       }
 
       // sort and pick the 1st file afterwards
-      qSort(files);
+      std::sort(pages.begin(), pages.end());
 
       if (cacheFileInfo.open(QIODevice::WriteOnly | QIODevice::Text))
       {
          QTextStream out(&cacheFileInfo);
-         foreach (const QString& file, files)
+         for (const auto& p : pages)
          {
-            out << file << "\n";
+            out << p.mFileIndex << ";" << p.mFilename << "\n";
          }
 
          cacheFileInfo.close();
@@ -240,7 +262,7 @@ void Unpacker::readFrontPage()
    // store book information
    mBook = new Book();
    mBook->mFilename = mFilename;
-   mBook->mPages = files;
+   mBook->mPages = pages;
 
    // rewind to start and read file
    // auto desiredFile = files.at(0);

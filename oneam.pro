@@ -1,18 +1,10 @@
-#-------------------------------------------------
-#
-# Project created by QtCreator 2014-11-10T20:52:01
-#
-#-------------------------------------------------
-
-QT       += core gui
-
-# CONFIG += console
+QT += core
+QT += gui
+QT += widgets
 
 win32 {
    QTPLUGIN += plugins/qjpeg4
 }
-
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = oneam
 TEMPLATE = app
@@ -26,10 +18,15 @@ INCLUDEPATH += thirdparty/bit7z
 INCLUDEPATH += src
 
 LIBS += -L$${PWD}/lib
-LIBS += -lbit7z64
 LIBS += -loleaut32
 LIBS += -luser32
 
+CONFIG(release, debug|release) {
+   LIBS += -lbit7z64
+}
+CONFIG(debug, debug|release) {
+   LIBS += -lbit7z64_d
+}
 
 SOURCES += src/main.cpp\
     src/unpacker.cpp \

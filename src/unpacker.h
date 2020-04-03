@@ -5,8 +5,8 @@
 #include <QRunnable>
 #include <QString>
 
+#include "book.h"
 
-struct Book;
 
 class Unpacker : public QObject, public QRunnable
 {
@@ -32,7 +32,7 @@ public:
 
    // archive operations
    void readData(int32_t page);
-   QStringList getArchiveContents(const QString& desiredFile);
+   std::vector<Page> getArchiveContents(const QString& desiredFile);
 
    const std::vector<uint8_t>& getPixmap();
    size_t getPixmapSize();

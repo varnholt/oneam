@@ -61,9 +61,10 @@ protected:
    Book* mBook = nullptr;
    QTimer* mScrollUpdateTimer = nullptr;
 
-   int mIndex = 0;
-   int mItemWidth = 0;
-   int mItemHeight = 0;
+   int32_t mIndex = 0;
+
+   int32_t mItemWidth = 0;
+   int32_t mItemHeight = 0;
 
    float mY = 0.0f;
    float mDy = 0.0f;

@@ -2,9 +2,21 @@
 
 #include <QStringList>
 
+#include <cstdint>
+#include <vector>
+
+struct Page
+{
+   bool operator < (const Page& other);
+   QString mFilename;
+   int32_t mFileIndex;
+};
+
+
 struct Book
 {
    QString mFilename;
-   QStringList mPages;
+   std::vector<Page> mPages;
 };
+
 
