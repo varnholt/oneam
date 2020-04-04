@@ -68,15 +68,9 @@ PageWidget::~PageWidget()
 }
 
 
-Book *PageWidget::getBook() const
+std::shared_ptr<Book> PageWidget::getBook() const
 {
    return mBook;
-}
-
-
-void PageWidget::setBook(Book *book)
-{
-   mBook = book;
 }
 
 
@@ -287,9 +281,9 @@ void PageWidget::updateScrollBarOffset()
 }
 
 
-void PageWidget::showBook(Book * book)
+void PageWidget::showBook(std::shared_ptr<Book> book)
 {
-   setBook(book);
+   mBook = book;
    raise();
    setIndex(0);
    load();

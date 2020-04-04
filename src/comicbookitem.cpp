@@ -13,17 +13,11 @@ void ComicBookItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
    QGraphicsPixmapItem::mousePressEvent(event);
 
-   emit clicked(getBook());
+   emit clicked(mBook);
 }
 
 
-Book *ComicBookItem::getBook() const
-{
-   return mBook;
-}
-
-
-void ComicBookItem::setBook(Book *book)
+void ComicBookItem::setBook(std::shared_ptr<Book> book)
 {
    mBook = book;
 }

@@ -9,21 +9,15 @@ class ComicBookItem : public QObject, public QGraphicsPixmapItem
 {
    Q_OBJECT
 
-   public:
-
-      ComicBookItem();
-
-      Book *getBook() const;
-      void setBook(Book *book);
+public:
+   ComicBookItem();
+   void setBook(std::shared_ptr<Book> book);
 
 signals:
-
-      void clicked(Book*);
+   void clicked(std::shared_ptr<Book>);
 
 protected:
-
-      virtual void mousePressEvent(QGraphicsSceneMouseEvent* event);
-
-      Book* mBook;
+   virtual void mousePressEvent(QGraphicsSceneMouseEvent* event);
+   std::shared_ptr<Book> mBook;
 };
 

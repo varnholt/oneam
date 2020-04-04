@@ -27,7 +27,7 @@ public slots:
 
 private slots:
 
-   void showBook(Book*);
+   void showBook(std::shared_ptr<Book>);
    void showPreview();
    void action(QAction* action);
    void toggleFullscreen();

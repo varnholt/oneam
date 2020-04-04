@@ -16,13 +16,10 @@ class PageWidget : public QWidget
 public:
 
 
-   explicit PageWidget(QWidget *parent = 0);
+   explicit PageWidget(QWidget *parent = nullptr);
    ~PageWidget() override;
 
-
-   Book *getBook() const;
-   void setBook(Book *getBook);
-
+   std::shared_ptr<Book> getBook() const;
 
    int getIndex() const;
    void setIndex(int getIndex);
@@ -41,7 +38,7 @@ protected:
 public slots:
 
    void load();
-   void showBook(Book*);
+   void showBook(std::shared_ptr<Book>);
 
 
 private slots:
@@ -59,7 +56,7 @@ protected:
 
    Ui::PageWidget *mUi = nullptr;
    QGraphicsScene* mScene = nullptr;
-   Book* mBook = nullptr;
+   std::shared_ptr<Book> mBook = nullptr;
    QTimer* mScrollUpdateTimer = nullptr;
 
    int32_t mIndex = 0;

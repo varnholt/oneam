@@ -36,8 +36,9 @@ public:
    int getPreviewIndex() const;
    void setPreviewIndex(int getPreviewIndex);
 
-   Book* getBook() const;
-   void setBook(Book* getBook);
+   void setPreviewWidth(const int32_t& previewWidth);
+
+   std::shared_ptr<Book> getBook() const;
 
    void setFileIndex(int32_t getPage);
    void setTask(const Task &getTask);
@@ -55,8 +56,8 @@ private:
 
    void run();
    void readFrontPage();
+   bool loadCoverFromCache();
    void readPage();
-
 
    Task mTask = TaskIdle;
 
@@ -64,11 +65,13 @@ private:
 
    std::vector<uint8_t> mData;
 
-   int mPreviewIndex = 0;
-   Book* mBook = nullptr;
+   int32_t mPreviewWidth = 384;
+   int32_t mPreviewIndex = 0;
+   std::shared_ptr<Book> mBook = nullptr;
    QPixmap mCover;
    bool mValid = false;
 
    int32_t mFileIndex = 0;
+   void addCoverToCache();
 };
 

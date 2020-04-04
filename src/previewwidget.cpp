@@ -12,6 +12,9 @@
 #include <QThreadPool>
 #include <QTimer>
 
+/// stl
+#include <iostream>
+
 // comicview
 #include "book.h"
 #include "config.h"
@@ -22,8 +25,9 @@
 namespace
 {
    static const auto threads = 10;
-   static const auto itemsPerColumn = 3;
+   static const auto itemsPerColumn = 5;
 }
+
 
 PreviewWidget::PreviewWidget(QWidget *parent) :
     QWidget(parent),
@@ -94,7 +98,7 @@ void PreviewWidget::initDirList()
 }
 
 
-void PreviewWidget::itemClicked(Book* book)
+void PreviewWidget::itemClicked(std::shared_ptr<Book> book)
 {
    if (book)
    {
@@ -117,7 +121,7 @@ void PreviewWidget::initGraphicsView()
 
 
 void PreviewWidget::addItem(
-   Book* book,
+   std::shared_ptr<Book> book,
    int32_t index,
    const QPixmap& scaled,
    const QString& filename
@@ -141,13 +145,14 @@ void PreviewWidget::addItem(
    item->setPos(col, row);
 
    mScene->addItem(item);
+
    mBooks.insert(filename, book);
 
    connect(
       item,
-      SIGNAL(clicked(Book*)),
+      &ComicBookItem::clicked,
       this,
-      SLOT(itemClicked(Book*))
+      &PreviewWidget::itemClicked
    );
 
    const auto desiredHeight = row + mItemHeight;
@@ -183,6 +188,10 @@ void PreviewWidget::addPixmap()
 
       addItem(book, index, scaled, filename);
    }
+   else
+   {
+      std::cout << "unpacking failed" << std::endl;
+   }
 
    unpacker->deleteLater();
 }
@@ -197,6 +206,7 @@ void PreviewWidget::processNext()
       unpacker->setTask(Unpacker::TaskReadFrontPage);
       unpacker->setFilename(QString("%1/%2").arg(mPath).arg(file));
       unpacker->setPreviewIndex(mIndex);
+      unpacker->setPreviewWidth(mUi->mGraphicsView->width() / itemsPerColumn);
       unpacker->setAutoDelete(false);
 
       connect(

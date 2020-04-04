@@ -18,16 +18,16 @@ MainWidget::MainWidget(QWidget *parent) :
 
    connect(
       mUi->mPreview,
-      SIGNAL(showBook(Book*)),
+      &PreviewWidget::showBook,
       this,
-      SLOT(showBook(Book*))
+      &MainWidget::showBook
    );
 
    connect(
       mUi->mPreview,
-      SIGNAL(showBook(Book*)),
+      &PreviewWidget::showBook,
       mUi->mBook,
-      SLOT(showBook(Book*))
+      &PageWidget::showBook
    );
 
    connect(
@@ -67,7 +67,7 @@ void MainWidget::scan()
 }
 
 
-void MainWidget::showBook(Book*)
+void MainWidget::showBook(std::shared_ptr<Book>)
 {
    mUi->mStackedWidget->setCurrentWidget(
       mUi->mBook

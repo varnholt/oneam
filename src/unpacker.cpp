@@ -90,15 +90,9 @@ void Unpacker::setPreviewIndex(int index)
 }
 
 
-Book *Unpacker::getBook() const
+std::shared_ptr<Book> Unpacker::getBook() const
 {
    return mBook;
-}
-
-
-void Unpacker::setBook(Book *book)
-{
-   mBook = book;
 }
 
 
@@ -192,12 +186,6 @@ std::vector<Page> Unpacker::getArchiveContents()
 
       for (auto& item : items)
       {
-         // const auto& extension = item.extension();
-         // const auto& name = item.name();
-         // const auto& path = item.path();
-
-         // std::wcout << "name: " << name << " path: " << path << " ext: " << extension << std::endl;
-
          if (
                item.extension() == L"jpg"
             || item.extension() == L"png"
@@ -219,18 +207,56 @@ std::vector<Page> Unpacker::getArchiveContents()
 }
 
 
+bool Unpacker::loadCoverFromCache()
+{
+   auto cacheFilename = QString("%1/%2.jpg").arg(Config::getCachePath()).arg(QFileInfo(mFilename).baseName());
+   QFile cacheFileImage(cacheFilename);
+
+   if (cacheFileImage.exists())
+   {
+      if (cacheFileImage.open(QFile::ReadOnly))
+      {
+         mData.resize(static_cast<size_t>(cacheFileImage.size()));
+
+         cacheFileImage.read(reinterpret_cast<char*>(mData.data()), cacheFileImage.size());
+         cacheFileImage.close();
+
+         mValid = mCover.loadFromData(
+            reinterpret_cast<uchar*>(mData.data()),
+            static_cast<uint32_t>(getPixmapSize())
+         );
+
+         return true;
+      }
+   }
+   return false;
+}
+
+
+void Unpacker::addCoverToCache()
+{
+   auto cacheFilename = QString("%1/%2.jpg").arg(Config::getCachePath()).arg(QFileInfo(mFilename).baseName());
+
+   readData(mBook->mPages.at(0).mFileIndex);
+
+   mValid = mCover.loadFromData(
+      reinterpret_cast<uchar*>(mData.data()),
+      static_cast<uint32_t>(getPixmapSize())
+   );
+
+   auto scaled = mCover.scaledToWidth(qMin(mCover.width(), mPreviewWidth), Qt::SmoothTransformation);
+   scaled.save(cacheFilename);
+}
+
+
 void Unpacker::readFrontPage()
 {
    qDebug("processing file: %s", qPrintable(mFilename));
 
-   // read archive contents
-   std::vector<Page> pages;
+   mBook = std::make_shared<Book>();
 
    // try cache info
-   QFileInfo baseInfo(mFilename);
-   QString baseName = baseInfo.baseName();
-
-   QFile cacheFileInfo(QString("%1/%2.txt").arg(Config::getCachePath()).arg(baseName));
+   QFile cacheFileInfo(QString("%1/%2.txt").arg(Config::getCachePath()).arg(QFileInfo(mFilename).baseName()));
    if (cacheFileInfo.exists())
    {
       if (cacheFileInfo.open(QFile::ReadOnly | QIODevice::Text))
@@ -249,27 +275,27 @@ void Unpacker::readFrontPage()
             page.mFilename = filename;
             page.mFileIndex = fileIndex;
 
-            pages.push_back(page);
+            mBook->mPages.push_back(page);
          }
       }
    }
    else
    {
-      pages = getArchiveContents();
+      mBook->mPages = getArchiveContents();
 
       // nothing to do if no files in there
-      if (pages.empty())
+      if (mBook->mPages.empty())
       {
          return;
       }
 
       // sort and pick the 1st file afterwards
-      std::sort(pages.begin(), pages.end());
+      std::sort(mBook->mPages.begin(), mBook->mPages.end());
 
       if (cacheFileInfo.open(QIODevice::WriteOnly | QIODevice::Text))
       {
          QTextStream out(&cacheFileInfo);
-         for (const auto& p : pages)
+         for (const auto& p : mBook->mPages)
          {
             out << p.mFileIndex << ";" << p.mFilename << "\n";
          }
@@ -279,43 +305,12 @@ void Unpacker::readFrontPage()
    }
 
    // store book information
-   mBook = new Book();
    mBook->mFilename = mFilename;
-   mBook->mPages = pages;
-
-   // rewind to start and read file
-   // auto desiredFile = files.at(0);
 
    // check cache
-   auto cacheFilename = QString("%1/%2.jpg").arg(Config::getCachePath()).arg(baseName);
-   QFile cacheFileImage(cacheFilename);
-
-   if (cacheFileImage.exists())
+   if (!loadCoverFromCache())
    {
-      if (cacheFileImage.open(QFile::ReadOnly))
-      {
-         mData.resize(static_cast<size_t>(cacheFileImage.size()));
-
-         cacheFileImage.read(reinterpret_cast<char*>(mData.data()), cacheFileImage.size());
-         cacheFileImage.close();
-
-         mValid = mCover.loadFromData(
-            reinterpret_cast<uchar*>(mData.data()),
-            static_cast<uint32_t>(getPixmapSize())
-         );
-      }
-   }
-   else
-   {
-      readData(mBook->mPages.at(0).mFileIndex);
-
-      mValid = mCover.loadFromData(
-         reinterpret_cast<uchar*>(mData.data()),
-         static_cast<uint32_t>(getPixmapSize())
-      );
-
-      auto scaled = mCover.scaledToWidth(qMin(mCover.width(), 1000), Qt::SmoothTransformation);
-      scaled.save(cacheFilename);
+      addCoverToCache();
    }
 }
 
@@ -323,6 +318,11 @@ void Unpacker::readFrontPage()
 void Unpacker::readPage()
 {
    readData(mFileIndex);
+}
+
+void Unpacker::setPreviewWidth(const int32_t& previewWidth)
+{
+   mPreviewWidth = previewWidth;
 }
 
 

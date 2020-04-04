@@ -32,7 +32,7 @@ public:
 
 signals:
 
-   void showBook(Book*);
+   void showBook(std::shared_ptr<Book>);
 
 
 protected:
@@ -49,13 +49,13 @@ private slots:
 
    void addPixmap();
    void addItem(
-      Book* book,
+      std::shared_ptr<Book>,
       int32_t index,
       const QPixmap& scaled,
       const QString& filename
    );
 
-   void itemClicked(Book*);
+   void itemClicked(std::shared_ptr<Book>);
 
    void updateScrollBar();
    void updateScrollBarOffset();
@@ -65,7 +65,7 @@ private:
    Ui::PreviewWidget* mUi = nullptr;
    QGraphicsScene* mScene = nullptr;
 
-   QMap<QString, Book*> mBooks;
+   QMap<QString, std::shared_ptr<Book>> mBooks;
 
    QStringList mDirList;
 
