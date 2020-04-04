@@ -21,7 +21,7 @@
 
 namespace
 {
-   static const auto threads = 1;
+   static const auto threads = 10;
    static const auto itemsPerColumn = 3;
 }
 
@@ -41,6 +41,13 @@ PreviewWidget::PreviewWidget(QWidget *parent) :
       &QTimer::timeout,
       this,
       &PreviewWidget::updateScrollBar
+   );
+
+   connect(
+      mUi->mGraphicsView->verticalScrollBar(),
+      &QAbstractSlider::sliderReleased,
+      this,
+      &PreviewWidget::updateScrollBarOffset
    );
 
    mScrollUpdateTimer->setInterval(16);
@@ -171,7 +178,7 @@ void PreviewWidget::addPixmap()
       auto scaled = unpacker->getCover().scaledToWidth(mItemWidth, Qt::SmoothTransformation);
 
       const auto book = unpacker->getBook();
-      const auto index = unpacker->getIndex();
+      const auto index = unpacker->getPreviewIndex();
       const auto filename = unpacker->getFilename();
 
       addItem(book, index, scaled, filename);
@@ -189,7 +196,7 @@ void PreviewWidget::processNext()
       Unpacker* unpacker = new Unpacker();
       unpacker->setTask(Unpacker::TaskReadFrontPage);
       unpacker->setFilename(QString("%1/%2").arg(mPath).arg(file));
-      unpacker->setIndex(mIndex);
+      unpacker->setPreviewIndex(mIndex);
       unpacker->setAutoDelete(false);
 
       connect(
@@ -276,6 +283,12 @@ void PreviewWidget::updateScrollBar()
    {
       mUi->mGraphicsView->verticalScrollBar()->setValue(static_cast<int32_t>(mY));
    }
+}
+
+
+void PreviewWidget::updateScrollBarOffset()
+{
+   mY = mUi->mGraphicsView->verticalScrollBar()->value();
 }
 
 

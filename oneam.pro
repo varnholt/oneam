@@ -14,8 +14,9 @@ UI_DIR = .ui
 OBJECTS_DIR = .obj
 
 INCLUDEPATH += thirdparty/bit7z
-
 INCLUDEPATH += src
+
+DEFINES += BIT7Z_AUTO_FORMAT
 
 LIBS += -L$${PWD}/lib
 LIBS += -loleaut32

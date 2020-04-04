@@ -58,7 +58,7 @@ private slots:
    void itemClicked(Book*);
 
    void updateScrollBar();
-
+   void updateScrollBarOffset();
 
 private:
 

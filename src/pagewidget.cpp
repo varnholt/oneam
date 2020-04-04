@@ -31,11 +31,19 @@ PageWidget::PageWidget(QWidget *parent) :
    initGraphicsView();
 
    mScrollUpdateTimer = new QTimer(this);
+
    connect(
       mScrollUpdateTimer,
       &QTimer::timeout,
       this,
       &PageWidget::updateScrollBar
+   );
+
+   connect(
+      mUi->mGraphicsView->verticalScrollBar(),
+      &QAbstractSlider::sliderReleased,
+      this,
+      &PageWidget::updateScrollBarOffset
    );
 
    mScrollUpdateTimer->setInterval(16);
@@ -77,7 +85,7 @@ void PageWidget::load()
    Unpacker* unpacker = new Unpacker();
    unpacker->setTask(Unpacker::TaskReadpage);
    unpacker->setFilename(mBook->mFilename);
-   unpacker->setPage(0); // mBook->mPages.at(getIndex())
+   unpacker->setFileIndex(mBook->mPages[getIndex()].mFileIndex);
    unpacker->setAutoDelete(false);
    QThreadPool::globalInstance()->start(unpacker);
 
@@ -241,7 +249,10 @@ void PageWidget::update()
 
    mDy = 0.0f;
    mY = 0.0f;
+
    mMax = mUi->mGraphicsView->verticalScrollBar()->maximum();
+
+   updateScrollBar();
 }
 
 
@@ -269,6 +280,11 @@ void PageWidget::updateScrollBar()
    }
 }
 
+
+void PageWidget::updateScrollBarOffset()
+{
+   mY = mUi->mGraphicsView->verticalScrollBar()->value();
+}
 
 
 void PageWidget::showBook(Book * book)

@@ -17,7 +17,7 @@ public:
 
 
    explicit PageWidget(QWidget *parent = 0);
-   ~PageWidget();
+   ~PageWidget() override;
 
 
    Book *getBook() const;
@@ -30,12 +30,12 @@ public:
 
 protected:
 
-   virtual void keyPressEvent(QKeyEvent *);
-   virtual void keyReleaseEvent(QKeyEvent *);
+   void keyPressEvent(QKeyEvent *) override;
+   void keyReleaseEvent(QKeyEvent *) override;
 
-   virtual void resizeEvent(QResizeEvent*);
-   virtual void showEvent(QShowEvent*);
-   virtual void hideEvent(QHideEvent*);
+   void resizeEvent(QResizeEvent*) override;
+   void showEvent(QShowEvent*) override;
+   void hideEvent(QHideEvent*) override;
 
 
 public slots:
@@ -50,6 +50,7 @@ private slots:
    void prev();
    void update();
    void updateScrollBar();
+   void updateScrollBarOffset();
 
 
 protected:

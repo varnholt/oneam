@@ -24,15 +24,8 @@ public:
 
    Unpacker(QObject* parent = nullptr);
 
-   void run();
-
-   // basic operations
-   void readFrontPage();
-   void readPage();
-
-   // archive operations
    void readData(int32_t page);
-   std::vector<Page> getArchiveContents(const QString& desiredFile);
+   std::vector<Page> getArchiveContents();
 
    const std::vector<uint8_t>& getPixmap();
    size_t getPixmapSize();
@@ -40,25 +33,16 @@ public:
    const QString& getFilename() const;
    void setFilename(const QString &getFilename);
 
-
-   int getIndex() const;
-   void setIndex(int getIndex);
-
+   int getPreviewIndex() const;
+   void setPreviewIndex(int getPreviewIndex);
 
    Book* getBook() const;
    void setBook(Book* getBook);
 
-
-   int32_t getPage() const;
-   void setPage(int32_t getPage);
-
-
-   Task getTask() const;
+   void setFileIndex(int32_t getPage);
    void setTask(const Task &getTask);
 
-
    const QPixmap& getCover() const;
-
    bool isValid() const;
 
 
@@ -67,7 +51,12 @@ signals:
    void done();
 
 
-protected:
+private:
+
+   void run();
+   void readFrontPage();
+   void readPage();
+
 
    Task mTask = TaskIdle;
 
@@ -75,11 +64,11 @@ protected:
 
    std::vector<uint8_t> mData;
 
-   int mIndex = 0;
+   int mPreviewIndex = 0;
    Book* mBook = nullptr;
    QPixmap mCover;
    bool mValid = false;
 
-   int32_t mPage = 0;
+   int32_t mFileIndex = 0;
 };
 

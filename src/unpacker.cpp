@@ -78,15 +78,15 @@ void Unpacker::setFilename(const QString &filename)
 }
 
 
-int Unpacker::getIndex() const
+int Unpacker::getPreviewIndex() const
 {
-   return mIndex;
+   return mPreviewIndex;
 }
 
 
-void Unpacker::setIndex(int index)
+void Unpacker::setPreviewIndex(int index)
 {
-   mIndex = index;
+   mPreviewIndex = index;
 }
 
 
@@ -102,21 +102,9 @@ void Unpacker::setBook(Book *book)
 }
 
 
-int32_t Unpacker::getPage() const
+void Unpacker::setFileIndex(int32_t page)
 {
-   return mPage;
-}
-
-
-void Unpacker::setPage(int32_t page)
-{
-   mPage = page;
-}
-
-
-Unpacker::Task Unpacker::getTask() const
-{
-   return mTask;
+   mFileIndex = page;
 }
 
 
@@ -138,19 +126,45 @@ bool Unpacker::isValid() const
 }
 
 
-void Unpacker::readData(int32_t page = 0)
+const bit7z::BitInFormat& getFormat(const QString& filename)
 {
-   std::cout << "reading page " << page << " from " << mFilename.toStdString() << std::endl;
+   if (filename.toLower().endsWith(".cbz"))
+   {
+      return bit7z::BitFormat::Zip;
+   }
+   else if (filename.toLower().endsWith(".cbr"))
+   {
+      return bit7z::BitFormat::Rar;
+   }
+   else if (filename.toLower().endsWith(".cb7"))
+   {
+      return bit7z::BitFormat::SevenZip;
+   }
+   else if (filename.toLower().endsWith(".cbt"))
+   {
+      return bit7z::BitFormat::Tar;
+   }
+
+   return bit7z::BitFormat::Rar;
+}
+
+
+void Unpacker::readData(int32_t fileIndex)
+{
+   std::cout << "reading page " << fileIndex << " from " << mFilename.toStdString() << std::endl;
 
    try
    {
       bit7z::Bit7zLibrary lib{L"7z.dll"};
-      bit7z::BitExtractor extractor{ lib, bit7z::BitFormat::Rar };
+      bit7z::BitExtractor extractor{
+         lib,
+         getFormat(mFilename)
+      };
 
       extractor.extract(
          mFilename.toStdWString(),
          mData,
-         static_cast<uint32_t>(page)
+         static_cast<uint32_t>(fileIndex)
       );
    }
    catch (const bit7z::BitException& ex)
@@ -160,24 +174,29 @@ void Unpacker::readData(int32_t page = 0)
 }
 
 
-std::vector<Page> Unpacker::getArchiveContents(const QString& desiredFile)
+std::vector<Page> Unpacker::getArchiveContents()
 {
    std::vector<Page> pages;
 
    try
    {
       bit7z::Bit7zLibrary lib{L"7z.dll"};
-      bit7z::BitArchiveInfo arc{lib, desiredFile.toStdWString(), bit7z::BitFormat::Rar};
+
+      bit7z::BitArchiveInfo arc{
+         lib,
+         mFilename.toStdWString(),
+         getFormat(mFilename)
+      };
 
       const auto& items = arc.items();
 
       for (auto& item : items)
       {
-         const auto& extension = item.extension();
-         const auto& name = item.name();
-         const auto& path = item.path();
+         // const auto& extension = item.extension();
+         // const auto& name = item.name();
+         // const auto& path = item.path();
 
-         std::wcout << "name: " << name << " path: " << path << " ext: " << extension << std::endl;
+         // std::wcout << "name: " << name << " path: " << path << " ext: " << extension << std::endl;
 
          if (
                item.extension() == L"jpg"
@@ -236,7 +255,7 @@ void Unpacker::readFrontPage()
    }
    else
    {
-      pages = getArchiveContents(mFilename);
+      pages = getArchiveContents();
 
       // nothing to do if no files in there
       if (pages.empty())
@@ -288,7 +307,7 @@ void Unpacker::readFrontPage()
    }
    else
    {
-      readData();
+      readData(mBook->mPages.at(0).mFileIndex);
 
       mValid = mCover.loadFromData(
          reinterpret_cast<uchar*>(mData.data()),
@@ -303,7 +322,7 @@ void Unpacker::readFrontPage()
 
 void Unpacker::readPage()
 {
-   readData(mPage);
+   readData(mFileIndex);
 }
 
 
