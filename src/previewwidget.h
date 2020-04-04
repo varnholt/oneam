@@ -51,7 +51,6 @@ private slots:
    void addItem(
       std::shared_ptr<Book>,
       int32_t index,
-      const QPixmap& scaled,
       const QString& filename
    );
 

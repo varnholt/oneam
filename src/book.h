@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QStringList>
+#include <QPixmap>
 
 #include <cstdint>
 #include <vector>
@@ -15,6 +16,7 @@ struct Page
 
 struct Book
 {
+   QPixmap mCover;
    QString mFilename;
    std::vector<Page> mPages;
 };

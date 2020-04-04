@@ -25,7 +25,7 @@
 namespace
 {
    static const auto threads = 10;
-   static const auto itemsPerColumn = 5;
+   static const auto itemsPerColumn = 6;
 }
 
 
@@ -123,7 +123,6 @@ void PreviewWidget::initGraphicsView()
 void PreviewWidget::addItem(
    std::shared_ptr<Book> book,
    int32_t index,
-   const QPixmap& scaled,
    const QString& filename
 )
 {
@@ -140,7 +139,7 @@ void PreviewWidget::addItem(
    mMax = qMax((row + 1) * mItemHeight, mMax);
 
    ComicBookItem* item = new ComicBookItem();
-   item->setPixmap(scaled);
+   item->setPixmap(book->mCover);
    item->setBook(book);
    item->setPos(col, row);
 
@@ -180,13 +179,11 @@ void PreviewWidget::addPixmap()
 
    if (unpacker->isValid())
    {
-      auto scaled = unpacker->getCover().scaledToWidth(mItemWidth, Qt::SmoothTransformation);
-
       const auto book = unpacker->getBook();
       const auto index = unpacker->getPreviewIndex();
       const auto filename = unpacker->getFilename();
 
-      addItem(book, index, scaled, filename);
+      addItem(book, index, filename);
    }
    else
    {
@@ -211,17 +208,17 @@ void PreviewWidget::processNext()
 
       connect(
          unpacker,
-         SIGNAL(done()),
+         &Unpacker::done,
          this,
-         SLOT(addPixmap()),
+         &PreviewWidget::addPixmap,
          Qt::QueuedConnection
       );
 
       connect(
          unpacker,
-         SIGNAL(done()),
+         &Unpacker::done,
          this,
-         SLOT(processNext()),
+         &PreviewWidget::processNext,
          Qt::QueuedConnection
       );
 

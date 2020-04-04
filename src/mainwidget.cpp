@@ -3,6 +3,8 @@
 
 #include "config.h"
 
+#include <QResizeEvent>
+
 
 MainWidget::MainWidget(QWidget *parent) :
    QMainWindow(parent),
@@ -15,6 +17,9 @@ MainWidget::MainWidget(QWidget *parent) :
 
    mShortcutFullscreen = new QShortcut(this);
    mShortcutFullscreen->setKey(Qt::Key_F11);
+
+   mShortcutRefresh = new QShortcut(this);
+   mShortcutRefresh->setKey(Qt::Key_F5);
 
    connect(
       mUi->mPreview,
@@ -32,6 +37,13 @@ MainWidget::MainWidget(QWidget *parent) :
 
    connect(
       mShortcutEscape,
+      &QShortcut::activated,
+      this,
+      &MainWidget::showPreview
+   );
+
+   connect(
+      mShortcutRefresh,
       &QShortcut::activated,
       this,
       &MainWidget::showPreview
@@ -60,10 +72,13 @@ MainWidget::~MainWidget()
 }
 
 
-
-void MainWidget::scan()
+void MainWidget::resizeEvent(QResizeEvent* evt)
 {
-   mUi->mPreview->scan();
+   // start scanning when we have a proper screen size
+   if (evt->oldSize().width() != -1)
+   {
+      showPreview();
+   }
 }
 
 

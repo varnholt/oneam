@@ -51,12 +51,9 @@ int main(int argc, char *argv[])
       }
    }
 
-   // PreviewWidget w;
    MainWidget w;
-   w.show();
    w.setWindowTitle(QString("oneAM %1").arg(version));
    w.showMaximized();
-   w.scan();
 
    return a.exec();
 }

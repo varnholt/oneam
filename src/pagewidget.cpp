@@ -210,8 +210,8 @@ void PageWidget::update()
    QPixmap pixmap;
 
    bool valid = pixmap.loadFromData(
-      const_cast<uchar*>(unpacker->getPixmap().data()),
-      static_cast<uint32_t>(unpacker->getPixmapSize())
+      const_cast<uchar*>(unpacker->getRawData().data()),
+      static_cast<uint32_t>(unpacker->getRawDataSize())
    );
 
    if (valid)

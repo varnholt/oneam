@@ -27,25 +27,26 @@ public:
    void readData(int32_t page);
    std::vector<Page> getArchiveContents();
 
-   const std::vector<uint8_t>& getPixmap();
-   size_t getPixmapSize();
+   const std::vector<uint8_t>& getRawData();
+   size_t getRawDataSize();
 
    const QString& getFilename() const;
    void setFilename(const QString &getFilename);
 
    int getPreviewIndex() const;
-   void setPreviewIndex(int getPreviewIndex);
+   void setPreviewIndex(int32_t getPreviewIndex);
 
-   void setPreviewWidth(const int32_t& previewWidth);
+   void setPreviewWidth(int32_t previewWidth);
 
    std::shared_ptr<Book> getBook() const;
 
    void setFileIndex(int32_t getPage);
    void setTask(const Task &getTask);
 
-   const QPixmap& getCover() const;
    bool isValid() const;
 
+
+   void writeMetadataToCache();
 
 signals:
 
@@ -58,20 +59,20 @@ private:
    void readFrontPage();
    bool loadCoverFromCache();
    void readPage();
+   void addCoverToCache();
+   bool loadMetadataFromCache();
 
    Task mTask = TaskIdle;
 
    QString mFilename;
 
-   std::vector<uint8_t> mData;
+   std::vector<uint8_t> mRawData;
 
    int32_t mPreviewWidth = 384;
    int32_t mPreviewIndex = 0;
    std::shared_ptr<Book> mBook = nullptr;
-   QPixmap mCover;
    bool mValid = false;
 
    int32_t mFileIndex = 0;
-   void addCoverToCache();
 };
 
