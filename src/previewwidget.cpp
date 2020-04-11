@@ -24,7 +24,6 @@
 
 namespace
 {
-   static const auto threads = 10;
    static const auto itemsPerColumn = 6;
 }
 
@@ -66,7 +65,7 @@ PreviewWidget::~PreviewWidget()
 }
 
 
-void PreviewWidget::scan()
+void PreviewWidget::scan(int32_t threads)
 {
    if (!Config::getInstance()->isValid())
    {
@@ -169,6 +168,12 @@ void PreviewWidget::addItem(
    if (fi.baseName() == Config::getInstance()->getRequestedBook())
    {
       emit showBook(book);
+   }
+
+   // z ordering when done
+   if (mScene->items().count() == mDirList.size())
+   {
+      scan(1);
    }
 }
 

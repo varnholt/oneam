@@ -27,7 +27,7 @@ public:
 
    void initDirList();
 
-   void scan();
+   void scan(int32_t threads = 10);
 
 
 signals:
