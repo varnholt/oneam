@@ -82,3 +82,26 @@ The shared archive library is built from unmodified, pinned official sources
 using a CMake recipe adapted from Microsoft vcpkg. Its source and standalone build
 recipe are distributed alongside binaries. This keeps deployment reproducible
 while allowing the library to be rebuilt and replaced independently.
+
+## Mouse, touch and keyboard parity
+
+Keyboard shortcuts and pointer controls share the same command dispatcher.
+The persistent bottom bar provides previous/next page buttons, while the controls
+menu exposes first/last page, zoom in/out/reset, both fit modes, scrolling,
+library, opening files/folders, fullscreen and help. Help and close stay visible
+while menu items scroll. Android does not expose the unsupported folder picker.
+
+Icons are native vector geometry with consistent strokes and rounded caps;
+they do not use ASCII characters, font glyphs or another runtime dependency.
+Buttons have at least 48 logical pixels of hit area, with hover, disabled and
+active states. Rendering and hit testing use the same responsive geometry.
+
+The control regression suite verifies safe-area bounds, non-overlapping toolbar
+buttons, scrolling access to every command, clipped hit testing, and keyboard
+equivalents across narrow, wide and landscape layouts. Emulator interaction checks
+cover last-page navigation, zoom/reset, menu scrolling, fullscreen and help.
+
+Rotation testing exposed late Android surface invalidation after the first resize
+frame. A short redraw interval after resize/focus changes keeps that transition
+painted, then the renderer returns to its idle behavior. Smoke-test sessions use
+separate settings so visual checks do not alter the user's reading position.

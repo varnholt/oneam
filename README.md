@@ -23,16 +23,21 @@ cache, and resizing reuses the current image instead of extracting it again.
 | Action | Desktop | Touch |
 |---|---|---|
 | Open a book | Open / Ctrl+O | Open |
-| Next / previous page | Right / Left, Page Down / Up, Space | Swipe horizontally or tap the right / left edge |
-| First / last page | Home / End | — |
+| Next / previous page | Bottom buttons; Right / Left, Page Down / Up, Space | Bottom buttons, swipe or tap a page edge |
+| First / last page | Menu; Home / End | Menu |
 | Scroll / pan | Wheel, Up / Down, drag | Drag |
-| Zoom | Ctrl+wheel, + / - | Pinch |
-| Reset zoom | 0 | Fit button |
-| Fit page / fit width | W or Fit / Width | Fit / Width |
-| Shelf | Escape or oneam | Android Back or oneam |
+| Zoom | Menu; Ctrl+wheel, + / - | Menu or pinch |
+| Reset zoom | Menu; 0 | Menu |
+| Fit page / fit width | Menu; W | Menu |
+| Shelf | Library or Escape | Library or Android Back |
 | Select a shelf book | Arrow keys, Enter | Tap a cover |
-| Fullscreen | F11 | System window behavior |
-| Help | F1 | — |
+| Fullscreen | Menu; F11 | Menu |
+| Help | Menu's help button; F1 | Menu's help button |
+
+All keyboard commands have visible mouse and touch equivalents. The shared
+controls menu scrolls on small screens, and its help and close buttons stay fixed.
+Buttons use vector icons, clear disabled/active/hover states and touch targets
+of at least 48 logical pixels. No icon fonts or image libraries are required.
 
 ## Desktop build
 
