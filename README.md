@@ -100,6 +100,8 @@ Embedded `ComicInfo.xml` provides title, series, issue, writer, summary and mang
 direction. See **Menu → Book information**. Missing or malformed metadata falls
 back to the filename. Metadata is read locally without fetching external resources.
 
+![Page thumbnails and direct page navigation in oneam](docs/images/pages.png)
+
 ## Desktop build
 
 Requires CMake 3.22+, a C/C++ toolchain with C++23 `std::expected`, and internet

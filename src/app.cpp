@@ -135,7 +135,7 @@ struct App
    Panel panel = Panel::None;
    float panel_scroll = 0;
    std::string entry, search_query;
-   bool editing = false;
+   bool editing = false, replace_entry = false;
    int library_sort = 0, library_filter = 0;
    std::vector<std::string> collection, book_order;
    std::unordered_map<std::string, Settings::Progress> progress;
@@ -529,7 +529,7 @@ struct App
    }
    void turn(int direction)
    {
-      if (!book || busy)
+      if (!book)
          return;
       const auto shown_end = page + (pair_visible() ? 1 : 0);
       if (direction > 0 && shown_end + 1 >= book->pages.size())
@@ -832,6 +832,7 @@ struct App
    void edit_entry()
    {
       editing = true;
+      replace_entry = true;
       const auto props = SDL_CreateProperties();
       SDL_SetNumberProperty(
          props, SDL_PROP_TEXTINPUT_TYPE_NUMBER, panel == Panel::Pages ? SDL_TEXTINPUT_TYPE_NUMBER : SDL_TEXTINPUT_TYPE_TEXT
@@ -1503,6 +1504,13 @@ struct App
             confirm_entry();
          else if (editing && event.key == SDLK_BACKSPACE && !entry.empty())
          {
+            if (replace_entry)
+            {
+               entry.clear();
+               replace_entry = false;
+               dirty = true;
+               return;
+            }
             auto n = entry.size() - 1;
             while (n && (static_cast<unsigned char>(entry[n]) & 0xc0) == 0x80)
                --n;
@@ -1585,6 +1593,11 @@ struct App
             if (editing && (panel == Panel::Pages || panel == Panel::Search))
             {
                const std::string_view input(event.text.text);
+               if (replace_entry)
+               {
+                  entry.clear();
+                  replace_entry = false;
+               }
                if (entry.size() + input.size() <= 256 && (panel != Panel::Pages || input.find_first_not_of("0123456789") == input.npos))
                   entry += input;
                dirty = true;
