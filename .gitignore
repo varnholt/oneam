@@ -30,3 +30,16 @@
 *.exe
 *.out
 *.app
+/build*/
+/.deps/
+/artifacts/
+/android/.gradle/
+/android/.cxx/
+/android/app/.cxx/
+/android/build/
+/android/local.properties
+/android/app/build/
+*.bmp
+*.log
+__pycache__/
+*.pyc

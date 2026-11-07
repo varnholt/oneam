@@ -1,0 +1,46 @@
+plugins { id 'com.android.application' }
+
+def sdl = file('../../.deps/sdl3')
+if (!new File(sdl, 'CMakeLists.txt').exists()) {
+    throw new GradleException('Run python scripts/prepare_android.py from the repository root first.')
+}
+android {
+    namespace 'com.varnholt.oneam'
+    compileSdk 36
+    ndkVersion providers.gradleProperty('oneamNdk').getOrElse('27.1.12297006')
+    defaultConfig {
+        applicationId 'com.varnholt.oneam'
+        minSdk 26
+        targetSdk 36
+        versionCode 20000
+        versionName '2.0.0'
+        ndk { abiFilters(*providers.gradleProperty('oneamAbis').getOrElse('arm64-v8a').split(',')) }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_shared', '-DONEAM_BUILD_TESTS=OFF',
+                    "-DFETCHCONTENT_SOURCE_DIR_SDL3=${sdl.absolutePath.replace('\\', '/')}",
+                    "-DFETCHCONTENT_SOURCE_DIR_SEVENZIP=${file('../../.deps/sevenzip').absolutePath.replace('\\', '/')}",
+                    '-DCMAKE_CXX_EXTENSIONS=OFF'
+                targets 'main', 'SDL3-shared', '7zip'
+            }
+        }
+    }
+    buildTypes {
+        debug { debuggable true }
+        release { minifyEnabled false }
+    }
+    externalNativeBuild {
+        cmake { path '../../CMakeLists.txt'; version '3.22.1' }
+    }
+    sourceSets {
+        main {
+            java.srcDirs += new File(sdl, 'android-project/app/src/main/java')
+            assets.srcDirs = ['../../assets']
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    packaging { jniLibs { useLegacyPackaging = false } }
+}
