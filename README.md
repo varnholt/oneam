@@ -1,8 +1,8 @@
-# oneam
+# one:am
 
 [![Build](https://github.com/varnholt/oneam/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/varnholt/oneam/actions/workflows/build.yml?query=branch%3Amaster)
 
-[**Try in your browser**](https://varnholt.github.io/oneam/) � [**Download a release**](https://github.com/varnholt/oneam/releases)
+[**Try in your browser**](https://varnholt.github.io/oneam/) · [**Download a release**](https://github.com/varnholt/oneam/releases)
 
 A small comic reader for Windows, Linux, macOS, Android and the browser. The reader uses C++23,
 SDL3 and one 7-Zip archive backend, both built from pinned source. Qt and bit7z
@@ -15,7 +15,7 @@ Reduced pages use background Mitchell filtering in linear light to prevent jagge
 text and line art. The original pixels remain available for zooming, and both
 rendering axes always use the same scale to preserve the page's aspect ratio.
 
-![oneam desktop reader showing a comic page, vector toolbar and page navigation](docs/images/reader.png)
+![one:am desktop reader showing a comic page, vector toolbar and page navigation](docs/images/reader.png)
 
 ## Downloads
 
@@ -110,7 +110,7 @@ Embedded `ComicInfo.xml` provides title, series, issue, writer, summary and mang
 direction. See **Menu → Book information**. Missing or malformed metadata falls
 back to the filename. Metadata is read locally without fetching external resources.
 
-![Page thumbnails and direct page navigation in oneam](docs/images/pages.png)
+![Page thumbnails and direct page navigation in one:am](docs/images/pages.png)
 
 ## Desktop build
 
