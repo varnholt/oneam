@@ -3,71 +3,107 @@
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include <stb_image_resize2.h>
 
-namespace oneam {
-Result<Image> resize_image(const Image &source, int width, int height) {
-  auto valid = [](int w, int h) {
-    return w > 0 && h > 0 && w <= 16384 && h <= 16384 &&
-           static_cast<std::uint64_t>(w) * h * 4 <= max_decoded_bytes;
-  };
-  if (!valid(width, height) || !valid(source.width, source.height) ||
-      source.pixels.size() != static_cast<std::size_t>(source.width) * source.height * 4)
-    return std::unexpected("Invalid image dimensions for filtering.");
-  Image output{width, height, std::vector<std::uint8_t>(static_cast<std::size_t>(width) * height * 4)};
-  // Mitchell downsampling integrates the full source footprint, in linear light.
-  if (!stbir_resize_uint8_srgb(source.pixels.data(), source.width, source.height, 0, output.pixels.data(),
-                               width, height, 0, STBIR_RGBA))
-    return std::unexpected("Could not filter this page.");
-  return output;
+namespace oneam
+{
+Result<Image> resize_image(const Image& source, int width, int height)
+{
+   return filter_image(source, width, height, {0, 0, source.width, source.height}, {});
 }
-PageScaler::PageScaler() : worker_([this] { run(); }) {
+Result<Image> filter_image(const Image& source, int width, int height, SDL_Rect crop, Tone tone)
+{
+   auto valid = [](int w, int h)
+   { return w > 0 && h > 0 && w <= 16384 && h <= 16384 && static_cast<std::uint64_t>(w) * h * 4 <= max_decoded_bytes; };
+   if (!valid(width, height) || !valid(source.width, source.height) ||
+       source.pixels.size() != static_cast<std::size_t>(source.width) * source.height * 4)
+      return std::unexpected("Invalid image dimensions for filtering.");
+   if (crop.w <= 0 || crop.h <= 0)
+      crop = {0, 0, source.width, source.height};
+   if (crop.x < 0 || crop.y < 0 || crop.w > source.width || crop.h > source.height || crop.x > source.width - crop.w ||
+       crop.y > source.height - crop.h)
+      return std::unexpected("Invalid page crop.");
+   Image output{width, height, std::vector<std::uint8_t>(static_cast<std::size_t>(width) * height * 4)};
+   // Mitchell downsampling integrates the full source footprint, in linear light.
+   if (!stbir_resize_uint8_srgb(
+          source.pixels.data() + (std::size_t(crop.y) * source.width + crop.x) * 4,
+          crop.w,
+          crop.h,
+          source.width * 4,
+          output.pixels.data(),
+          width,
+          height,
+          0,
+          STBIR_RGBA
+       ))
+      return std::unexpected("Could not filter this page.");
+   if (!(tone == Tone{}))
+   {
+      const auto table = tone_table(tone);
+      for (std::size_t i = 0; i < output.pixels.size(); i += 4)
+         for (int c = 0; c < 3; ++c)
+            output.pixels[i + c] = table[output.pixels[i + c]];
+   }
+   return output;
 }
-PageScaler::~PageScaler() {
-  {
-    std::lock_guard lock(mutex_);
-    stopping_ = true;
-  }
-  condition_.notify_one();
-  worker_.join();
+PageScaler::PageScaler() : worker_([this] { run(); })
+{
 }
-void PageScaler::request(std::shared_ptr<const Image> source, int width, int height) {
-  if (!source) {
-    clear();
-    return;
-  }
-  std::lock_guard lock(mutex_);
-  pending_ = Job{std::move(source), width, height, ++generation_};
-  update_.reset();
-  condition_.notify_one();
+PageScaler::~PageScaler()
+{
+   {
+      std::lock_guard lock(mutex_);
+      stopping_ = true;
+   }
+   condition_.notify_one();
+   worker_.join();
 }
-void PageScaler::clear() {
-  std::lock_guard lock(mutex_);
-  ++generation_;
-  pending_.reset();
-  update_.reset();
+void PageScaler::request(std::shared_ptr<const Image> source, int width, int height, SDL_Rect crop, Tone tone)
+{
+   if (!source)
+   {
+      clear();
+      return;
+   }
+   std::lock_guard lock(mutex_);
+   pending_ = Job{std::move(source), width, height, ++generation_, crop, tone};
+   update_.reset();
+   condition_.notify_one();
 }
-std::optional<PageScaler::Update> PageScaler::poll() {
-  std::lock_guard lock(mutex_);
-  return std::exchange(update_, {});
+void PageScaler::clear()
+{
+   std::lock_guard lock(mutex_);
+   ++generation_;
+   pending_.reset();
+   update_.reset();
 }
-void PageScaler::run() {
-  for (;;) {
-    std::optional<Job> job;
-    {
-      std::unique_lock lock(mutex_);
-      condition_.wait(lock, [this] { return stopping_ || pending_; });
-      if (stopping_)
-        return;
-      job = std::exchange(pending_, {});
-    }
-    Result<Image> output = std::unexpected("Page filtering failed.");
-    try {
-      output = resize_image(*job->source, job->width, job->height);
-    } catch (const std::exception &) {
-      // Keep the source texture usable if temporary filtering allocation fails.
-    }
-    std::lock_guard lock(mutex_);
-    if (!stopping_ && job->generation == generation_ && output)
-      update_ = Update{std::move(job->source), std::move(*output)};
-  }
+std::optional<PageScaler::Update> PageScaler::poll()
+{
+   std::lock_guard lock(mutex_);
+   return std::exchange(update_, {});
 }
-} // namespace oneam
+void PageScaler::run()
+{
+   for (;;)
+   {
+      std::optional<Job> job;
+      {
+         std::unique_lock lock(mutex_);
+         condition_.wait(lock, [this] { return stopping_ || pending_; });
+         if (stopping_)
+            return;
+         job = std::exchange(pending_, {});
+      }
+      Result<Image> output = std::unexpected("Page filtering failed.");
+      try
+      {
+         output = filter_image(*job->source, job->width, job->height, job->crop, job->tone);
+      }
+      catch (const std::exception&)
+      {
+         // Keep the source texture usable if temporary filtering allocation fails.
+      }
+      std::lock_guard lock(mutex_);
+      if (!stopping_ && job->generation == generation_ && output)
+         update_ = Update{std::move(job->source), std::move(*output)};
+   }
+}
+}  // namespace oneam

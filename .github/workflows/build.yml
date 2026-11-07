@@ -10,7 +10,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-24.04, macos-15]
+        include:
+          - os: windows-latest
+            target: Windows-x64
+            configure: -A x64
+          - os: windows-11-arm
+            target: Windows-arm64
+            configure: -A ARM64
+          - os: ubuntu-24.04
+            target: Linux-x64
+          - os: ubuntu-24.04-arm
+            target: Linux-arm64
+          - os: macos-15-intel
+            target: macOS-x64
+          - os: macos-15
+            target: macOS-arm64
+    name: ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -18,7 +33,7 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libxtst-dev libwayland-dev libxkbcommon-dev libegl1-mesa-dev libgl1-mesa-dev
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.configure }}
       - name: Build
         run: cmake --build build --config Release --parallel 4
       - name: Regression tests
@@ -27,11 +42,18 @@ jobs:
         run: cmake --install build --config Release --prefix artifacts/oneam
       - name: Package archive-library source
         run: python scripts/package_archive_source.py build/_deps/sevenzip-src artifacts/oneam/oneam-archive-source.zip
+      - name: Include instructions
+        run: cmake -E copy README.md artifacts/oneam/README.md
       - uses: actions/upload-artifact@v4
         with:
-          name: oneam-${{ runner.os }}
+          name: oneam-${{ matrix.target }}
           path: artifacts/oneam/
   android:
+    name: Android-${{ matrix.abi }}
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, x86_64]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -49,12 +71,12 @@ jobs:
         run: python3 scripts/prepare_android.py
       - name: Build installable debug APK
         working-directory: android
-        run: bash ./gradlew --no-daemon assembleDebug
+        run: bash ./gradlew --no-daemon assembleDebug -PoneamAbis=${{ matrix.abi }}
       - name: Package archive-library source
         run: python3 scripts/package_archive_source.py .deps/sevenzip artifacts/oneam-archive-source.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: oneam-android-arm64-debug
+          name: oneam-Android-${{ matrix.abi }}-debug
           path: |
             android/app/build/outputs/apk/debug/*.apk
             artifacts/oneam-archive-source.zip

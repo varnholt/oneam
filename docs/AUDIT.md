@@ -121,3 +121,34 @@ allocation bounds, unchanged source pixels and worker cancellation.
 
 Reading mode removes both bars, with a floating Controls button, center tap/click
 and Tab to restore them. The shared menu exposes the action at every screen size.
+
+## Reading and library features
+
+The reader now includes a thumbnail browser and numeric page entry, two-page
+spreads with a cover offset, right-to-left manga controls, conservative margin
+trimming, continuous scrolling, bookmarks, next-book navigation, rotation and
+brightness/contrast/gamma adjustments. The shelf adds Unicode title/filename
+search, title/recent/progress sorting, reading-state filters and read/unread actions.
+Reading preferences, progress and bookmarks are stored separately from archives.
+
+Continuous scrolling uses the current page and its immediate neighbors. A pending
+scroll gesture survives neighbor loading, avoiding a stop at a page boundary.
+Neighbor reads and image filtering run on workers; GPU uploads stay on the UI thread.
+Thumbnail decoding and downsampling also run on workers with bounded caches.
+
+ComicInfo.xml is limited to 1 MiB and read through the existing archive interface.
+Its scalar metadata parser handles UTF-8 entities and CDATA, rejects external
+entities/DTDs, and falls back to filenames for malformed metadata. No XML runtime
+dependency or network metadata lookup is introduced.
+
+New regressions cover crop bounds and safety margins, rotation dimensions, spread
+pairing, neutral/tuned colors, metadata parsing, bookmarks and progress persistence.
+Nine full-application software-renderer workflows exercise page entry, spreads,
+continuous boundaries in both directions, image controls, bookmarks, library tools,
+metadata extraction and automatic next-book navigation with generated comics.
+Android interaction checks cover the numeric keyboard, direct touch page navigation,
+bookmarking, thumbnail loading and rotation.
+
+The CMake and C++ formatter configurations match Deceptus. Order-sensitive 7-Zip
+GUID headers are explicitly excluded from include sorting so formatting cannot
+change their initialization semantics.

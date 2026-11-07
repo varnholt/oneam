@@ -4,79 +4,126 @@
 #include <string_view>
 #include <vector>
 
-namespace oneam::ui {
-enum class Action {
-  None,
-  Menu,
-  Close,
-  Open,
-  Folder,
-  Library,
-  Previous,
-  Next,
-  First,
-  Last,
-  ZoomOut,
-  ZoomIn,
-  ResetZoom,
-  FitPage,
-  FitWidth,
-  ToggleFit,
-  ReadingMode,
-  Fullscreen,
-  Help,
-  ScrollUp,
-  ScrollDown,
-  Back
+namespace oneam::ui
+{
+enum class Action
+{
+   None,
+   Menu,
+   Close,
+   Open,
+   Folder,
+   Library,
+   Previous,
+   Next,
+   First,
+   Last,
+   ZoomOut,
+   ZoomIn,
+   ResetZoom,
+   FitPage,
+   FitWidth,
+   ToggleFit,
+   ReadingMode,
+   Pages,
+   Single,
+   Spread,
+   Continuous,
+   Manga,
+   CoverAlone,
+   Trim,
+   Bookmark,
+   Bookmarks,
+   NextBook,
+   AutoNext,
+   Rotate,
+   Adjust,
+   Info,
+   Search,
+   SortTitle,
+   SortRecent,
+   SortProgress,
+   FilterAll,
+   FilterUnread,
+   FilterReading,
+   FilterRead,
+   MarkRead,
+   MarkUnread,
+   BrightnessDown,
+   BrightnessUp,
+   ContrastDown,
+   ContrastUp,
+   GammaDown,
+   GammaUp,
+   ResetImage,
+   Confirm,
+   Fullscreen,
+   Help,
+   ScrollUp,
+   ScrollDown,
+   Back
 };
-enum class Icon {
-  Book,
-  Grid,
-  Open,
-  Folder,
-  Left,
-  Right,
-  First,
-  Last,
-  ZoomOut,
-  ZoomIn,
-  Reset,
-  FitPage,
-  FitWidth,
-  Expand,
-  Collapse,
-  Help,
-  Close,
-  Menu,
-  Up,
-  Down
+enum class Icon
+{
+   Book,
+   Grid,
+   Open,
+   Folder,
+   Left,
+   Right,
+   First,
+   Last,
+   ZoomOut,
+   ZoomIn,
+   Reset,
+   FitPage,
+   FitWidth,
+   Expand,
+   Collapse,
+   Help,
+   Close,
+   Menu,
+   Up,
+   Down,
+   Pages,
+   Bookmark,
+   Rotate,
+   Adjust,
+   Search,
+   Spread,
+   Continuous
 };
-struct Context {
-  bool reading = false, book = false, image = false, folders = true;
-  bool previous = false, next = false, fullscreen = false, fit_width = false;
-  bool controls_hidden = false;
+struct Context
+{
+   bool reading = false, book = false, image = false, folders = true;
+   bool previous = false, next = false, fullscreen = false, fit_width = false;
+   bool controls_hidden = false;
+   bool spread = false, continuous = false, manga = false, cover_alone = true, trim = false;
+   bool bookmarked = false, auto_next = false, next_book = false;
 };
-struct Control {
-  Action action = Action::None;
-  SDL_FRect rect{};
-  std::string_view label;
-  Icon icon = Icon::Book;
-  bool enabled = true, active = false;
+struct Control
+{
+   Action action = Action::None;
+   SDL_FRect rect{};
+   std::string_view label;
+   Icon icon = Icon::Book;
+   bool enabled = true, active = false;
 };
-struct MenuLayout {
-  SDL_FRect panel{}, viewport{};
-  std::vector<Control> fixed, items;
-  float max_scroll = 0, scroll = 0, content_height = 0;
+struct MenuLayout
+{
+   SDL_FRect panel{}, viewport{};
+   std::vector<Control> fixed, items;
+   float max_scroll = 0, scroll = 0, content_height = 0;
 };
-bool contains(const SDL_FRect &rect, float x, float y);
-bool enabled(Action action, const Context &context);
-Icon icon(Action action, const Context &context);
-std::string_view label(Action action, const Context &context);
+bool contains(const SDL_FRect& rect, float x, float y);
+bool enabled(Action action, const Context& context);
+Icon icon(Action action, const Context& context);
+std::string_view label(Action action, const Context& context);
 std::string_view shortcut(Action action);
 std::optional<Action> keyboard(SDL_Keycode key, SDL_Keymod modifiers, bool reading);
-std::vector<Control> toolbar(SDL_FRect safe, const Context &context);
-std::vector<Control> navigation(SDL_FRect safe, const Context &context);
-MenuLayout menu(SDL_FRect safe, const Context &context, float scroll);
-std::optional<Action> hit(const std::vector<Control> &controls, float x, float y);
-std::optional<Action> hit(const MenuLayout &menu, float x, float y);
-} // namespace oneam::ui
+std::vector<Control> toolbar(SDL_FRect safe, const Context& context);
+std::vector<Control> navigation(SDL_FRect safe, const Context& context);
+MenuLayout menu(SDL_FRect safe, const Context& context, float scroll);
+std::optional<Action> hit(const std::vector<Control>& controls, float x, float y);
+std::optional<Action> hit(const MenuLayout& menu, float x, float y);
+}  // namespace oneam::ui

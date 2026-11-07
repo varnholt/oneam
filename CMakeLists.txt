@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.22)
 if(POLICY CMP0135)
-  cmake_policy(SET CMP0135 NEW)
+    cmake_policy(SET CMP0135 NEW)
 endif()
-project(oneam VERSION 2.0.0 LANGUAGES C CXX)
+project(
+    oneam
+    VERSION 2.0.0
+    LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -11,87 +14,148 @@ option(ONEAM_BUILD_TESTS "Build reader regression tests" ON)
 include(FetchContent)
 
 # Pin source revisions so desktop and Android use the same dependencies.
-set(SDL_SHARED ${ANDROID} CACHE BOOL "" FORCE)
-set(SDL_STATIC ON CACHE BOOL "" FORCE)
-set(SDL_TESTS OFF CACHE BOOL "" FORCE)
-set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
-foreach(subsystem AUDIO CAMERA JOYSTICK HAPTIC SENSOR HIDAPI GPU)
-  set(SDL_${subsystem} OFF CACHE BOOL "" FORCE)
+set(SDL_SHARED
+    ${ANDROID}
+    CACHE BOOL "" FORCE)
+set(SDL_STATIC
+    ON
+    CACHE BOOL "" FORCE)
+set(SDL_TESTS
+    OFF
+    CACHE BOOL "" FORCE)
+set(SDL_TEST_LIBRARY
+    OFF
+    CACHE BOOL "" FORCE)
+foreach(
+    subsystem
+    AUDIO
+    CAMERA
+    JOYSTICK
+    HAPTIC
+    SENSOR
+    HIDAPI
+    GPU)
+    set(SDL_${subsystem}
+        OFF
+        CACHE BOOL "" FORCE)
 endforeach()
-set(SDL_RENDER_GPU OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(SDL3 URL https://github.com/libsdl-org/SDL/archive/7f3ae3d57459e59943a4ecfefc8f6277ec6bf540.tar.gz)
+set(SDL_RENDER_GPU
+    OFF
+    CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    SDL3
+    URL https://github.com/libsdl-org/SDL/archive/7f3ae3d57459e59943a4ecfefc8f6277ec6bf540.tar.gz)
 FetchContent_MakeAvailable(SDL3)
-FetchContent_Declare(sevenzip URL https://github.com/ip7z/7zip/archive/9128b80e3a471108678e2b3ec3c985861c8d7b0f.tar.gz)
+FetchContent_Declare(
+    sevenzip
+    URL https://github.com/ip7z/7zip/archive/9128b80e3a471108678e2b3ec3c985861c8d7b0f.tar.gz)
 FetchContent_MakeAvailable(sevenzip)
-set(USE_NO_ASM ON CACHE BOOL "" FORCE)
+set(USE_NO_ASM
+    ON
+    CACHE BOOL "" FORCE)
 include(cmake/sevenzip.cmake)
 set_target_properties(7zip PROPERTIES OUTPUT_NAME oneam_archive)
 target_include_directories(7zip INTERFACE ${sevenzip_SOURCE_DIR}/CPP)
 if(UNIX)
-  find_package(Threads REQUIRED)
-  target_link_libraries(7zip PRIVATE Threads::Threads)
+    find_package(Threads REQUIRED)
+    target_link_libraries(7zip PRIVATE Threads::Threads)
 endif()
-FetchContent_Declare(stb URL https://github.com/nothings/stb/archive/f0569113c93ad095470c54bf34a17b36646bbbb5.tar.gz)
+FetchContent_Declare(
+    stb URL https://github.com/nothings/stb/archive/f0569113c93ad095470c54bf34a17b36646bbbb5.tar.gz)
 FetchContent_MakeAvailable(stb)
 
-add_library(oneam_core src/reader.cpp src/archive7z.cpp src/images.cpp src/scaler.cpp src/settings.cpp src/platform.cpp)
-target_include_directories(oneam_core PUBLIC src PRIVATE ${stb_SOURCE_DIR})
-target_link_libraries(oneam_core PUBLIC SDL3::SDL3 PRIVATE 7zip)
+add_library(
+    oneam_core
+    src/archive7z.cpp
+    src/images.cpp
+    src/metadata.cpp
+    src/platform.cpp
+    src/reader.cpp
+    src/reading.cpp
+    src/scaler.cpp
+    src/settings.cpp)
+target_include_directories(
+    oneam_core
+    PUBLIC src
+    PRIVATE ${stb_SOURCE_DIR})
+target_link_libraries(
+    oneam_core
+    PUBLIC SDL3::SDL3
+    PRIVATE 7zip)
 target_compile_features(oneam_core PUBLIC cxx_std_23)
 if(WIN32)
-  target_compile_definitions(oneam_core PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
-  target_link_libraries(oneam_core PRIVATE oleaut32 ole32 uuid)
+    target_compile_definitions(oneam_core PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_link_libraries(oneam_core PRIVATE oleaut32 ole32 uuid)
 endif()
 if(MSVC)
-  target_compile_options(oneam_core PRIVATE /W4 /permissive- /utf-8)
+    target_compile_options(oneam_core PRIVATE /W4 /permissive- /utf-8)
 else()
-  target_compile_options(oneam_core PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(oneam_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 if(ANDROID)
-  add_library(main SHARED src/app.cpp src/text.cpp src/controls.cpp src/icons.cpp)
-  set(app_target main)
+    add_library(main SHARED src/app.cpp src/controls.cpp src/icons.cpp src/page_texture.cpp
+                            src/text.cpp)
+    set(app_target main)
 else()
-  add_executable(oneam src/app.cpp src/text.cpp src/controls.cpp src/icons.cpp)
-  if(APPLE)
-    set_target_properties(oneam PROPERTIES INSTALL_RPATH "@loader_path")
-  elseif(UNIX)
-    set_target_properties(oneam PROPERTIES INSTALL_RPATH "$ORIGIN")
-  endif()
-  set(app_target oneam)
-  add_custom_command(TARGET oneam POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${PROJECT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:oneam>/assets)
-  install(TARGETS oneam 7zip RUNTIME DESTINATION . LIBRARY DESTINATION .)
-  install(DIRECTORY assets DESTINATION .)
-  if(WIN32)
-    set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION .)
-    include(InstallRequiredSystemLibraries)
-  endif()
+    add_executable(oneam src/app.cpp src/controls.cpp src/icons.cpp src/page_texture.cpp
+                         src/text.cpp)
+    if(APPLE)
+        set_target_properties(oneam PROPERTIES INSTALL_RPATH "@loader_path")
+    elseif(UNIX)
+        set_target_properties(oneam PROPERTIES INSTALL_RPATH "$ORIGIN")
+    endif()
+    set(app_target oneam)
+    add_custom_command(
+        TARGET oneam
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/assets
+                $<TARGET_FILE_DIR:oneam>/assets)
+    install(
+        TARGETS oneam 7zip
+        RUNTIME DESTINATION .
+        LIBRARY DESTINATION .)
+    install(DIRECTORY assets DESTINATION .)
+    if(WIN32)
+        set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION .)
+        include(InstallRequiredSystemLibraries)
+    endif()
 endif()
 target_include_directories(${app_target} PRIVATE ${stb_SOURCE_DIR})
 target_link_libraries(${app_target} PRIVATE oneam_core)
 if(ANDROID)
-  # Sideloadable debug APKs keep Java debugging while decoding at usable speed.
-  foreach(target 7zip oneam_core ${app_target})
-    target_compile_options(${target} PRIVATE -O2)
-  endforeach()
+    # Sideloadable debug APKs keep Java debugging while decoding at usable speed.
+    foreach(target 7zip oneam_core ${app_target})
+        target_compile_options(${target} PRIVATE -O2)
+    endforeach()
 endif()
 if(MSVC)
-  target_compile_options(${app_target} PRIVATE /W4 /permissive- /utf-8)
+    target_compile_options(${app_target} PRIVATE /W4 /permissive- /utf-8)
 endif()
 if(ONEAM_BUILD_TESTS AND NOT ANDROID)
-  enable_testing()
-  add_executable(reader_tests tests/reader_tests.cpp)
-  target_link_libraries(reader_tests PRIVATE oneam_core)
-  target_compile_definitions(reader_tests PRIVATE ONEAM_ARCHIVE_FIXTURES="${PROJECT_SOURCE_DIR}/tests/fixtures")
-  add_test(NAME reader_regressions COMMAND reader_tests)
-  add_executable(scaler_tests tests/scaler_tests.cpp)
-  target_link_libraries(scaler_tests PRIVATE oneam_core)
-  add_test(NAME antialiased_page_scaling COMMAND scaler_tests)
-  add_executable(control_tests tests/control_tests.cpp src/controls.cpp)
-  target_include_directories(control_tests PRIVATE src)
-  target_link_libraries(control_tests PRIVATE SDL3::SDL3)
-  target_compile_features(control_tests PRIVATE cxx_std_23)
-  add_test(NAME pointer_control_parity COMMAND control_tests)
-  add_executable(reader_probe tests/reader_probe.cpp)
-  target_link_libraries(reader_probe PRIVATE oneam_core)
+    enable_testing()
+    add_executable(reader_tests tests/reader_tests.cpp)
+    target_link_libraries(reader_tests PRIVATE oneam_core)
+    target_compile_definitions(
+        reader_tests PRIVATE ONEAM_ARCHIVE_FIXTURES="${PROJECT_SOURCE_DIR}/tests/fixtures")
+    add_test(NAME reader_regressions COMMAND reader_tests)
+    add_executable(scaler_tests tests/scaler_tests.cpp)
+    target_link_libraries(scaler_tests PRIVATE oneam_core)
+    add_test(NAME antialiased_page_scaling COMMAND scaler_tests)
+    add_executable(reading_tests tests/reading_tests.cpp)
+    target_link_libraries(reading_tests PRIVATE oneam_core)
+    add_test(NAME reading_features COMMAND reading_tests)
+    add_executable(control_tests src/controls.cpp tests/control_tests.cpp)
+    target_include_directories(control_tests PRIVATE src)
+    target_link_libraries(control_tests PRIVATE SDL3::SDL3)
+    target_compile_features(control_tests PRIVATE cxx_std_23)
+    add_test(NAME pointer_control_parity COMMAND control_tests)
+    find_package(Python3 COMPONENTS Interpreter)
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME reader_workflows
+                 COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/reader_workflows.py
+                         $<TARGET_FILE:oneam>)
+        set_tests_properties(reader_workflows PROPERTIES TIMEOUT 120)
+    endif()
+    add_executable(reader_probe tests/reader_probe.cpp)
+    target_link_libraries(reader_probe PRIVATE oneam_core)
 endif()

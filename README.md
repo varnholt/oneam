@@ -1,5 +1,7 @@
 # oneam
 
+[![Build](https://github.com/varnholt/oneam/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/varnholt/oneam/actions/workflows/build.yml?query=branch%3Amaster)
+
 A small comic reader for Windows, Linux, macOS and Android. The reader uses C++23,
 SDL3 and one 7-Zip archive backend, both built from pinned source. Qt and bit7z
 are removed; no user-installed archive utility or plugin is required.
@@ -12,6 +14,25 @@ text and line art. The original pixels remain available for zooming, and both
 rendering axes always use the same scale to preserve the page's aspect ratio.
 
 ![oneam desktop reader showing a comic page, vector toolbar and page navigation](docs/images/reader.png)
+
+## Downloads
+
+Open the [latest successful master build](https://github.com/varnholt/oneam/actions/workflows/build.yml?query=branch%3Amaster+is%3Asuccess)
+and download a package under **Artifacts**. GitHub requires signing in to download
+Actions artifacts. Unzip desktop packages and keep their files together.
+
+| Platform | Artifact |
+|---|---|
+| Windows x64 | `oneam-Windows-x64` |
+| Windows ARM64 | `oneam-Windows-arm64` |
+| Linux x64 | `oneam-Linux-x64` |
+| Linux ARM64 | `oneam-Linux-arm64` |
+| macOS Intel | `oneam-macOS-x64` |
+| macOS Apple Silicon | `oneam-macOS-arm64` |
+| Android ARM64 phones/tablets | `oneam-Android-arm64-v8a-debug` |
+| Android x86_64 / emulators | `oneam-Android-x86_64-debug` |
+
+Android packages contain an installable debug APK. WebAssembly is not yet a supported target.
 
 ## Reading
 
@@ -39,6 +60,16 @@ rendering axes always use the same scale to preserve the page's aspect ratio.
 | Select a shelf book | Arrow keys, Enter | Tap a cover |
 | Fullscreen | Menu; F11 | Menu |
 | Help | Menu's help button; F1 | Menu's help button |
+| Page browser / go to page | Menu; G | Menu, then tap a thumbnail or page-number field |
+| Single / two-page / continuous | Menu | Menu |
+| Manga / cover offset / trim margins | Menu | Menu |
+| Bookmark current page | Menu; B | Menu |
+| Browse bookmarks | Menu | Menu |
+| Rotate clockwise | Menu; R | Menu |
+| Brightness / contrast / gamma | Menu → Image adjustments | Menu → Image adjustments |
+| Next book / automatic next book | Menu | Menu |
+| Search library | Search field; Ctrl+F | Search field |
+| Sort / filter / mark read or unread | Shelf Menu; right-click a cover to select it | Long-press a cover, then Menu commands |
 
 All keyboard commands have visible mouse and touch equivalents. The shared
 controls menu scrolls on small screens, and its help and close buttons stay fixed.
@@ -46,6 +77,28 @@ A floating **Controls** button stays available when the bars are hidden. Escape
 or Android Back restores the bars before returning to the shelf.
 Buttons use vector icons, clear disabled/active/hover states and touch targets
 of at least 48 logical pixels. No icon fonts or image libraries are required.
+
+Two-page mode can keep the cover alone or pair it with the next page. Manga mode
+reverses the spread order, left/right arrows, edge taps and swipe direction.
+Continuous mode fits pages to the available width and scrolls across page boundaries;
+only neighboring pages are loaded, rather than stitching an entire book into memory.
+
+Margin trimming conservatively removes plain near-white or transparent borders,
+retaining a safety margin. It is reversible and never changes an archive. Rotation
+and brightness/contrast/gamma adjustments are also display-only. Reading modes,
+image adjustments and library sort/filter choices persist between sessions.
+
+The shelf shows unread, in-progress and finished states, with progress percentages.
+Search matches titles and filenames using Unicode case folding. Sort by title,
+recently opened or reading progress; filter by reading state. Marking a book unread
+also resets its saved position. Right-click or long-press selects a book without
+opening it. Next-book navigation follows natural filename order in the current
+collection, independently of the shelf's filter. With **Auto next book** enabled,
+turning forward beyond the final page opens the next book; it never wraps around.
+
+Embedded `ComicInfo.xml` provides title, series, issue, writer, summary and manga
+direction. See **Menu → Book information**. Missing or malformed metadata falls
+back to the filename. Metadata is read locally without fetching external resources.
 
 ## Desktop build
 
@@ -86,14 +139,16 @@ The installable APK is `android/app/build/outputs/apk/debug/app-debug.apk`.
 The default architecture is ARM64; add `-PoneamAbis=arm64-v8a,x86_64` for an APK
 that also runs on an x86_64 emulator. Minimum Android version: 8.0 (API 26).
 
-The GitHub Actions workflow builds desktop packages and uploads an
-`oneam-android-arm64-debug` APK artifact on pushes, pull requests and manual runs.
+The GitHub Actions workflow builds the desktop and Android targets listed above
+on pushes, pull requests and manual runs. Each desktop target runs the regression
+suite; Android builds ARM64 and x86_64 APKs independently.
 Debug APKs use optimized native decoding and are suitable for testing and sideloading. Release signing is deliberately
 left to the owner; no release credentials belong in the repository.
 
 ## Limits and verification
 
-The decoded page cache is capped at 128 MiB, with separate bounded cover textures.
+The main decoded page cache is capped at 128 MiB. Neighbor workers each have a
+32 MiB cache and the page-thumbnail worker has an 8 MiB cache, with separate bounded cover textures.
 Individual encoded images are limited to 64 MiB and decoded RGBA images to 96 MiB
 and 16384 pixels per dimension. Current displayed images and temporary decoder
 allocations are additional to the cache budget. Oversized or damaged pages report
@@ -106,14 +161,19 @@ cannot seek may not support archive formats requiring random access.
 
 The regression suite covers ZIP/7z/tar reads, RAR4/RAR5 interoperability,
 ordering, corrupt input, cache eviction, canceled requests, fast book switching,
-and persistence. See [the audit](docs/AUDIT.md) for the original defects and fixes.
+metadata, spread pairing, image adjustments, margin detection, bookmarks and progress.
+When Python is available, generated comic fixtures also exercise nine complete
+application workflows with the SDL software renderer, including continuous-scroll
+boundaries and automatic next-book navigation.
+See [the audit](docs/AUDIT.md) for the original defects and fixes.
 
 ## Dependencies
 
 There are two compiled third-party libraries: SDL3 for windows, rendering, input
 and native file dialogs, and 7-Zip for all archive formats and compression. There
 are no separate zlib, liblzma, libarchive or UnRAR dependencies. Image and font
-decoding use the `stb_image` and `stb_truetype` headers. Noto Sans is bundled under
+decoding use the `stb_image`, `stb_image_resize2` and `stb_truetype` headers from the
+same pinned source. Noto Sans is bundled under
 the SIL Open Font License. The font was
 taken from google/fonts revision `86aced91de05cd4f96a06838124cca45be337b2b`.
 Third-party license notices ship in `assets/licenses/` and `assets/OFL.txt`.
@@ -121,3 +181,11 @@ The 7-Zip backend uses its normal library interface and a small stream adapter;
 it is linked normally, without runtime library-path guessing or shell commands.
 Its CMake recipe is adapted from Microsoft vcpkg. Matching decoder source and
 a standalone rebuild recipe accompany CI artifacts as `oneam-archive-source.zip`.
+
+## Formatting
+
+The C++ and CMake configurations match Deceptus: `.clang-format` uses its Chromium
+base with Allman braces and three-space indentation; `.cmake-format.yaml` uses
+four-space indentation and a 100-column limit. Format repository C++ with
+`clang-format -i src/*.cpp src/*.hpp tests/*.cpp` and CMake with
+`cmake-format -i CMakeLists.txt cmake/sevenzip.cmake`.
