@@ -9,9 +9,15 @@ import zipfile
 spec = importlib.util.spec_from_file_location('package_release', pathlib.Path(__file__).parents[1] / 'scripts/package_release.py')
 release = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(release)
+version_spec = importlib.util.spec_from_file_location('find_release_build', pathlib.Path(__file__).parents[1] / 'scripts/find_release_build.py')
+version_module = importlib.util.module_from_spec(version_spec)
+version_spec.loader.exec_module(version_module)
 
 
 class ReleasePackaging(unittest.TestCase):
+    def test_project_version(self):
+        self.assertEqual(version_module.project_version('cmake_minimum_required(VERSION 3.22)\nproject(oneam VERSION 2.0.0 LANGUAGES C CXX)'), '2.0.0')
+
     def test_complete_release(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
