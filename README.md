@@ -11,6 +11,8 @@ Reduced pages use background Mitchell filtering in linear light to prevent jagge
 text and line art. The original pixels remain available for zooming, and both
 rendering axes always use the same scale to preserve the page's aspect ratio.
 
+![oneam desktop reader showing a comic page, vector toolbar and page navigation](docs/images/reader.png)
+
 ## Reading
 
 - Open **CBZ/ZIP, CBR/RAR, CB7/7z or CBT/tar** through **Open**, or drop a book onto
