@@ -1,4 +1,4 @@
-# oneam
+# one a.m.
 
 A small comic reader for Windows, Linux, macOS and Android. The reader uses C++23,
 SDL3 and one 7-Zip archive backend, both built from pinned source. Qt and bit7z
