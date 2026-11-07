@@ -11,6 +11,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(ONEAM_BUILD_TESTS "Build reader regression tests" ON)
+if(EMSCRIPTEN)
+    set(SDL_PTHREADS
+        ON
+        CACHE BOOL "" FORCE)
+    add_compile_options(-pthread -fexceptions)
+    add_link_options(-pthread -fexceptions)
+endif()
 include(FetchContent)
 
 # Pin source revisions so desktop and Android use the same dependencies.
@@ -55,6 +62,14 @@ set(USE_NO_ASM
     CACHE BOOL "" FORCE)
 include(cmake/sevenzip.cmake)
 set_target_properties(7zip PROPERTIES OUTPUT_NAME oneam_archive)
+if(EMSCRIPTEN)
+    set_target_properties(
+        7zip
+        PROPERTIES PREFIX ""
+                   SUFFIX ".wasm"
+                   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/web")
+    target_link_options(7zip PRIVATE -sSIDE_MODULE=1)
+endif()
 target_include_directories(7zip INTERFACE ${sevenzip_SOURCE_DIR}/CPP)
 if(UNIX)
     find_package(Threads REQUIRED)
@@ -105,6 +120,33 @@ else()
         set_target_properties(oneam PROPERTIES INSTALL_RPATH "$ORIGIN")
     endif()
     set(app_target oneam)
+    if(EMSCRIPTEN)
+        target_sources(oneam PRIVATE src/web_bridge.cpp)
+        set_target_properties(oneam PROPERTIES SUFFIX ".js" RUNTIME_OUTPUT_DIRECTORY
+                                                            "${CMAKE_BINARY_DIR}/web")
+        target_link_options(
+            oneam
+            PRIVATE
+            -sMAIN_MODULE=1
+            -sALLOW_MEMORY_GROWTH=1
+            -sINITIAL_MEMORY=134217728
+            -sPROXY_TO_PTHREAD=1
+            -sOFFSCREENCANVAS_SUPPORT=1
+            "-sOFFSCREENCANVASES_TO_PTHREAD=#canvas"
+            -sMAXIMUM_MEMORY=2147483648
+            -sPTHREAD_POOL_SIZE=10
+            -sDEFAULT_PTHREAD_STACK_SIZE=2097152
+            "-sEXPORTED_RUNTIME_METHODS=['ccall','FS']"
+            -lidbfs.js
+            "SHELL:--preload-file ${PROJECT_SOURCE_DIR}/assets@/assets"
+            "SHELL:--pre-js ${PROJECT_SOURCE_DIR}/web/storage.js")
+        add_custom_command(
+            TARGET oneam
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/web
+                    "${CMAKE_BINARY_DIR}/web")
+        install(DIRECTORY "${CMAKE_BINARY_DIR}/web/" DESTINATION .)
+    endif()
     add_custom_command(
         TARGET oneam
         POST_BUILD
@@ -131,7 +173,9 @@ endif()
 if(MSVC)
     target_compile_options(${app_target} PRIVATE /W4 /permissive- /utf-8)
 endif()
-if(ONEAM_BUILD_TESTS AND NOT ANDROID)
+if(ONEAM_BUILD_TESTS
+   AND NOT ANDROID
+   AND NOT EMSCRIPTEN)
     enable_testing()
     add_executable(reader_tests tests/reader_tests.cpp)
     target_link_libraries(reader_tests PRIVATE oneam_core)
@@ -155,6 +199,9 @@ if(ONEAM_BUILD_TESTS AND NOT ANDROID)
                  COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/reader_workflows.py
                          $<TARGET_FILE:oneam>)
         set_tests_properties(reader_workflows PROPERTIES TIMEOUT 120)
+        add_test(NAME release_packaging
+                 COMMAND ${Python3_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/test_release_packaging.py)
     endif()
     add_executable(reader_probe tests/reader_probe.cpp)
     target_link_libraries(reader_probe PRIVATE oneam_core)

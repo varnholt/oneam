@@ -152,3 +152,26 @@ bookmarking, thumbnail loading and rotation.
 The CMake and C++ formatter configurations match Deceptus. Order-sensitive 7-Zip
 GUID headers are explicitly excluded from include sorting so formatting cannot
 change their initialization semantics.
+
+## Per-book preferences, browser preview and releases
+
+Reading layout, manga direction, cover offset, zoom, rotation, trimming, fit mode,
+hidden controls and image adjustments now persist per book. New books use a
+separate default view, so one book's settings cannot leak into another. Saved
+values are versioned, bounded and validated; corrupt values fall back to defaults.
+Writes are debounced, with an immediate flush when switching books or closing.
+The application workflow tests switch between two books and verify independent
+restoration; settings tests also reopen the saved files through a new Settings object.
+
+The WebAssembly target uses the same reader and a replaceable 7-Zip side module.
+Its SDL main loop runs on a worker with OffscreenCanvas; DOM and storage operations
+are marshaled to the browser thread. File-open and resize requests use the existing
+mutex-protected inbox, and browser test state is exposed through atomic snapshots.
+Only preferences are mounted in IndexedDB; imported comics remain in memory.
+Browser tests exercise navigation, reload persistence, the header-based host mode,
+the GitHub Pages service worker fallback and the absence of upload requests.
+
+Release packaging promotes only a successful, trusted CI run for the exact tagged
+commit. It requires every target, preserves desktop executable permissions and
+publishes SHA-256 checksums with versioned ZIPs and APKs. A packaging regression
+verifies complete/missing targets, checksums and executable modes.

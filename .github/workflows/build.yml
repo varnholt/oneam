@@ -1,6 +1,7 @@
 name: Build
 on:
   push:
+    branches: ['**']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -83,3 +84,51 @@ jobs:
           path: |
             android/app/build/outputs/apk/debug/*.apk
             artifacts/oneam-archive-source.zip
+  web:
+    name: WebAssembly
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Emscripten 6.0.1
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          "$RUNNER_TEMP/emsdk/emsdk" install 6.0.1
+          "$RUNNER_TEMP/emsdk/emsdk" activate 6.0.1
+      - name: Build browser reader
+        shell: bash
+        run: |
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
+          emcmake cmake -S . -B build-web -DCMAKE_BUILD_TYPE=Release -DONEAM_BUILD_TESTS=OFF
+          cmake --build build-web --parallel 4
+          cmake --install build-web --prefix artifacts/oneam-web
+          python3 scripts/package_archive_source.py build-web/_deps/sevenzip-src artifacts/oneam-web/oneam-archive-source.zip
+      - name: Install browser test tools
+        run: |
+          python3 -m pip install playwright==1.56.0
+          python3 -m playwright install --with-deps chromium
+      - name: Browser integration tests
+        run: |
+          python3 tests/test_web.py artifacts/oneam-web
+          python3 tests/test_web.py artifacts/oneam-web --without-headers
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oneam-WebAssembly
+          path: artifacts/oneam-web/
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/master'
+        with:
+          path: artifacts/oneam-web/
+  preview:
+    name: Publish browser preview
+    if: github.ref == 'refs/heads/master'
+    needs: web
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

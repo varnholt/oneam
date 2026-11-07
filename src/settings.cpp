@@ -1,10 +1,12 @@
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
 #include "reader.hpp"
+#include "web_bridge.hpp"
 
 namespace oneam
 {
@@ -33,7 +35,12 @@ bool replace_file(const std::filesystem::path& destination, const std::string& t
    }
    // SDL's rename replaces an existing destination on every supported platform.
    const auto a = temp.u8string(), b = destination.u8string();
-   return SDL_RenamePath(reinterpret_cast<const char*>(a.c_str()), reinterpret_cast<const char*>(b.c_str()));
+   const bool saved = SDL_RenamePath(reinterpret_cast<const char*>(a.c_str()), reinterpret_cast<const char*>(b.c_str()));
+#ifdef __EMSCRIPTEN__
+   if (saved)
+      web_storage_changed();
+#endif
+   return saved;
 }
 }  // namespace
 std::string book_key(const std::string& source)
@@ -220,5 +227,45 @@ bool Settings::save_preference(const std::string& name, const std::string& value
    if (!valid_name(name) || value.size() > 4096 || value.find_first_of("\r\n") != value.npos)
       return false;
    return replace_file(file(directory_, "pref-" + name), value);
+}
+namespace
+{
+bool valid_view(const ViewSettings& value)
+{
+   return int(value.layout) >= 0 && int(value.layout) <= 2 && value.rotation >= 0 && value.rotation < 4 && std::isfinite(value.zoom) &&
+          value.zoom >= .25f && value.zoom <= 8 && std::isfinite(value.tone.brightness) && value.tone.brightness >= -.5f &&
+          value.tone.brightness <= .5f && std::isfinite(value.tone.contrast) && value.tone.contrast >= .5f && value.tone.contrast <= 2 &&
+          std::isfinite(value.tone.gamma) && value.tone.gamma >= .5f && value.tone.gamma <= 2;
+}
+}  // namespace
+std::optional<ViewSettings> Settings::view(const std::string& key) const
+{
+   if (!valid_key(key))
+      return {};
+   const auto location = file(directory_, key + ".view");
+   std::error_code ec;
+   if (std::filesystem::file_size(location, ec) > 512 || ec)
+      return {};
+   std::ifstream in(location);
+   ViewSettings value;
+   int version = 0, mode = 0;
+   if (!(in >> version >> mode >> value.manga >> value.cover_alone >> value.trim >> value.fit_width >> value.controls_hidden >>
+         value.rotation >> value.zoom >> value.tone.brightness >> value.tone.contrast >> value.tone.gamma) ||
+       version != 1)
+      return {};
+   value.layout = static_cast<ReadingMode>(mode);
+   if (!valid_view(value))
+      return {};
+   return value;
+}
+bool Settings::save_view(const std::string& key, const ViewSettings& value) const
+{
+   if (!valid_key(key) || !valid_view(value))
+      return false;
+   std::ostringstream out;
+   out << "1 " << int(value.layout) << ' ' << value.manga << ' ' << value.cover_alone << ' ' << value.trim << ' ' << value.fit_width << ' '
+       << value.controls_hidden << ' ' << value.rotation << ' ' << value.zoom << ' ' << value.tone.brightness << ' ' << value.tone.contrast
+       << ' ' << value.tone.gamma;
+   return replace_file(file(directory_, key + ".view"), out.str());
 }
 }  // namespace oneam

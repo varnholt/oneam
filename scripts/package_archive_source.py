@@ -21,8 +21,15 @@ project(oneam_archive LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(sevenzip_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/7zip)
 set(USE_NO_ASM ON CACHE BOOL "" FORCE)
+if(EMSCRIPTEN)
+  add_compile_options(-pthread -fexceptions)
+endif()
 include(cmake/sevenzip.cmake)
 set_target_properties(7zip PROPERTIES OUTPUT_NAME oneam_archive)
+if(EMSCRIPTEN)
+  set_target_properties(7zip PROPERTIES PREFIX "" SUFFIX ".wasm")
+  target_link_options(7zip PRIVATE -pthread -fexceptions -sSIDE_MODULE=1)
+endif()
 if(UNIX)
   find_package(Threads REQUIRED)
   target_link_libraries(7zip PRIVATE Threads::Threads)
@@ -47,5 +54,11 @@ See 7zip/DOC/License.txt, copying.txt and unRarLicense.txt for the licenses.
 The application dynamically links this library; a compatible rebuilt library
 can replace the bundled one. Android APKs must be repackaged and signed after
 replacement. No user-installed 7-Zip executable or plugin is required.
+
+For the browser build, use Emscripten 6.0.1:
+  emcmake cmake -S . -B build-web -DCMAKE_BUILD_TYPE=Release
+  cmake --build build-web --target 7zip
+Replace oneam_archive.wasm beside oneam.js with the rebuilt module. The module
+uses the browser reader's shared memory and exported runtime interfaces.
 ''')
 print(destination)

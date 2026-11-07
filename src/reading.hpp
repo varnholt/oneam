@@ -4,17 +4,6 @@
 
 namespace oneam
 {
-enum class ReadingMode
-{
-   Single,
-   Spread,
-   Continuous
-};
-struct Tone
-{
-   float brightness = 0, contrast = 1, gamma = 1;
-   bool operator==(const Tone&) const = default;
-};
 SDL_Rect detect_content(const Image& image);
 SDL_Rect page_crop(const Image& image, bool trim);
 SDL_FPoint page_size(const Image& image, bool trim, int rotation);

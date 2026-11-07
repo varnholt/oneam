@@ -16,11 +16,21 @@
 #include "reading.hpp"
 #include "scaler.hpp"
 #include "text.hpp"
+#include "web_bridge.hpp"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 namespace
 {
 using namespace oneam;
 constexpr SDL_Color ink{233, 234, 237, 255}, muted{157, 164, 179, 255}, accent{137, 194, 176, 255};
+#ifdef __EMSCRIPTEN__
+struct App;
+std::atomic<App*> browser_app{nullptr};
+std::atomic<int> browser_page{0}, browser_rotation{0};
+std::atomic<double> browser_zoom{1};
+#endif
 struct TextureDeleter
 {
    void operator()(SDL_Texture* texture) const
@@ -34,6 +44,7 @@ struct Inbox
    std::mutex mutex;
    std::optional<std::string> selected;
    std::optional<std::vector<std::string>> library;
+   std::optional<std::pair<int, int>> window_size;
    std::string error;
    std::atomic<bool> alive{true}, scanning{false};
    bool dialog = false, folder = false;
@@ -119,6 +130,9 @@ struct App
    bool manga = false, preferred_manga = false, cover_alone = true, trim = false, auto_next = false;
    int rotation = 0;
    Tone tone;
+   ViewSettings default_view;
+   bool restored_view = false, view_dirty = false;
+   std::uint64_t view_save_due = 0;
    std::vector<std::size_t> bookmarks;
    float continuous_carry = 0;
    float pending_scroll = 0;
@@ -175,6 +189,7 @@ struct App
 
    ~App()
    {
+      persist_view();
       inbox->alive = false;
       if (scanner)
          SDL_WaitThread(scanner, nullptr);
@@ -231,6 +246,16 @@ struct App
       if (!text->valid())
          return SDL_SetError("Missing assets/NotoSans.ttf. Rebuild or reinstall oneam.");
       library = settings->recent();
+#ifdef __EMSCRIPTEN__
+      std::erase_if(
+         library,
+         [](const auto& file)
+         {
+            std::error_code ec;
+            return !std::filesystem::exists(file, ec);
+         }
+      );
+#endif
       collection = library;
       order_books();
       load_preferences();
@@ -240,7 +265,7 @@ struct App
          if (!title.empty())
             titles[path] = std::move(title);
       }
-#ifndef SDL_PLATFORM_ANDROID
+#if !defined(SDL_PLATFORM_ANDROID) && !defined(__EMSCRIPTEN__)
       if (const auto folder = settings->folder(); !folder.empty())
          start_scan(folder);
 #endif
@@ -292,6 +317,8 @@ struct App
       if (smoke_frames && !smoke_library.empty())
          start_scan(smoke_library);
       smoke_frames = smoke_frames ? std::max(smoke_frames, int(smoke_actions.size()) * 30) : 0;
+      if (smoke_frames)
+         default_view = current_view();
       if (!startup_source.empty())
          open(startup_source);
       for (int i = 1; i < argc; ++i)
@@ -304,6 +331,11 @@ struct App
    }
    void dialog(bool folder = false)
    {
+#ifdef __EMSCRIPTEN__
+      if (!folder)
+         web_choose_book();
+      return;
+#endif
       {
          std::lock_guard lock(inbox->mutex);
          if (inbox->dialog)
@@ -321,11 +353,15 @@ struct App
    {
       if (path.empty())
          return;
+      persist_view();
       menu_open = help = false;
       close_panel();
       source = path;
       manga = preferred_manga;
       key = book_key(source);
+      const auto saved = settings->view(key);
+      restored_view = saved.has_value();
+      apply_view(saved.value_or(default_view));
       page = smoke_frames && smoke_page ? *smoke_page : settings->position(key);
       if (layout == ReadingMode::Spread)
          page = spread_start(page, cover_alone);
@@ -340,13 +376,11 @@ struct App
       page_thumbnails.clear();
       preview_pending.reset();
       bookmarks = settings->bookmarks(key);
-      rotation = 0;
       continuous_transition = false;
       pending_scroll = 0;
       shelf = false;
       error.clear();
       notice.clear();
-      zoom = 1;
       pan_x = pan_y = 0;
       busy = true;
       generation = reader->request(source, page, true);
@@ -476,6 +510,7 @@ struct App
       }
       std::istringstream lib(settings->preference("library"));
       preferred_manga = manga;
+      default_view = current_view();
       lib >> library_sort >> library_filter;
       library_sort = std::clamp(library_sort, 0, 2);
       library_filter = std::clamp(library_filter, 0, 3);
@@ -484,10 +519,42 @@ struct App
    void save_preferences()
    {
       std::ostringstream out;
-      out << int(layout) << ' ' << preferred_manga << ' ' << cover_alone << ' ' << trim << ' ' << auto_next << ' ' << tone.brightness << ' '
-          << tone.contrast << ' ' << tone.gamma;
+      out << int(default_view.layout) << ' ' << default_view.manga << ' ' << default_view.cover_alone << ' ' << default_view.trim << ' '
+          << auto_next << ' ' << default_view.tone.brightness << ' ' << default_view.tone.contrast << ' ' << default_view.tone.gamma;
       settings->save_preference("reader", out.str());
       settings->save_preference("library", std::to_string(library_sort) + " " + std::to_string(library_filter));
+   }
+   ViewSettings current_view() const
+   {
+      return {layout, manga, cover_alone, trim, fit_width, controls_hidden, rotation, zoom, tone};
+   }
+   void apply_view(const ViewSettings& view)
+   {
+      layout = view.layout;
+      manga = view.manga;
+      cover_alone = view.cover_alone;
+      trim = view.trim;
+      fit_width = view.fit_width;
+      controls_hidden = view.controls_hidden;
+      rotation = view.rotation;
+      zoom = view.zoom;
+      tone = view.tone;
+   }
+   void schedule_view_save()
+   {
+      if (key.empty() || !book || !image)
+         return;
+      view_dirty = true;
+      view_save_due = SDL_GetTicks() + 300;
+   }
+   void persist_view()
+   {
+      if (view_dirty && settings && !key.empty() && book && image)
+      {
+         if (!settings->save_view(key, current_view()))
+            notice = "Reading preferences could not be saved.";
+         view_dirty = false;
+      }
    }
    std::optional<std::string> next_book() const
    {
@@ -656,6 +723,7 @@ struct App
    {
       zoom = std::clamp(zoom * factor, .25f, 8.f);
       clamp_pan();
+      schedule_view_save();
       dirty = true;
    }
    void fullscreen()
@@ -724,7 +792,7 @@ struct App
          !shelf,
          shelf ? !library.empty() : bool(book),
          bool(image),
-#ifdef SDL_PLATFORM_ANDROID
+#if defined(SDL_PLATFORM_ANDROID) || defined(__EMSCRIPTEN__)
          false,
 #else
          true,
@@ -1123,6 +1191,7 @@ struct App
    void perform(ui::Action action)
    {
       using A = ui::Action;
+      const auto view_before = current_view();
       if (!ui::enabled(action, context()))
          return;
       if (action == A::Menu)
@@ -1160,6 +1229,7 @@ struct App
          {
             controls_hidden = false;
             clamp_pan();
+            schedule_view_save();
          }
          else
          {
@@ -1380,6 +1450,8 @@ struct App
             break;
       }
       clamp_pan();
+      if (current_view() != view_before)
+         schedule_view_save();
       if ((action >= A::Single && action <= A::Trim) || action == A::AutoNext || (action >= A::SortTitle && action <= A::FilterRead) ||
           (action >= A::BrightnessDown && action <= A::ResetImage))
          save_preferences();
@@ -1640,6 +1712,7 @@ struct App
             resize();
             break;
          case SDL_EVENT_WILL_ENTER_BACKGROUND:
+            persist_view();
             background = true;
             break;
          case SDL_EVENT_DID_ENTER_FOREGROUND:
@@ -1861,10 +1934,13 @@ struct App
    {
       {
          std::optional<std::string> chosen;
+         std::optional<std::pair<int, int>> window_size;
          bool folder = false;
          {
             std::lock_guard lock(inbox->mutex);
             chosen = std::move(inbox->selected);
+            window_size = inbox->window_size;
+            inbox->window_size.reset();
             inbox->selected.reset();
             folder = inbox->folder;
             if (!inbox->error.empty())
@@ -1889,6 +1965,11 @@ struct App
                dirty = true;
             }
          }
+         if (window_size)
+         {
+            SDL_SetWindowSize(window, window_size->first, window_size->second);
+            resize();
+         }
          if (chosen)
          {
             if (folder)
@@ -1909,7 +1990,7 @@ struct App
          image = result->image;
          upload();
          pan_x = pan_y = 0;
-         if (first && book && book->metadata.manga_rtl)
+         if (first && !restored_view && book && book->metadata.manga_rtl)
             manga = true;
          request_neighbors();
          if (continuous_transition)
@@ -1919,6 +2000,8 @@ struct App
          }
          if (image)
          {
+            if (first)
+               schedule_view_save();
             if (!titles.contains(source) || titles[source] != book->title)
             {
                titles[source] = book->title;
@@ -2015,6 +2098,8 @@ struct App
          dirty = true;
       }
       const auto now = SDL_GetTicks();
+      if (view_dirty && now >= view_save_due)
+         persist_view();
       advance_continuous();
       filter_page();
       const auto dt = std::min(.05f, (now - last_tick) / 1000.f);
@@ -2026,6 +2111,11 @@ struct App
       }
       else
          scroll = scroll_target;
+#ifdef __EMSCRIPTEN__
+      browser_page.store(!busy && image ? int(page + 1) : 0);
+      browser_rotation.store(rotation);
+      browser_zoom.store(zoom);
+#endif
    }
    void fill(SDL_FRect r, SDL_Color color)
    {
@@ -2265,6 +2355,15 @@ struct App
             entry = command.substr(5);
             confirm_entry();
          }
+         else if (command == "reopen")
+            open(source);
+         else if (command.starts_with("book:"))
+         {
+            const auto index = std::size_t(std::stoul(command.substr(5)));
+            if (index == 0 || index > book_order.size())
+               return SDL_APP_FAILURE;
+            open(book_order[index - 1]);
+         }
          else if (command.starts_with("search:"))
          {
             perform(ui::Action::Library);
@@ -2291,6 +2390,7 @@ struct App
                {"contrast", ui::Action::ContrastUp},
                {"gamma", ui::Action::GammaUp},
                {"reset-image", ui::Action::ResetImage},
+               {"zoom-in", ui::Action::ZoomIn},
                {"info", ui::Action::Info},
                {"close", ui::Action::Close},
                {"library", ui::Action::Library},
@@ -2312,11 +2412,14 @@ struct App
             perform(found->second);
          }
          SDL_Log("Smoke action: %s; page=%zu; layout=%d", command.c_str(), page + 1, int(layout));
+         SDL_Log("View: layout=%d rotation=%d zoom=%.2f trim=%d", int(layout), rotation, zoom, int(trim));
          smoke_action_due = SDL_GetTicks() + 100;
       }
       if (background)
       {
+#ifndef __EMSCRIPTEN__
          SDL_Delay(40);
+#endif
          return SDL_APP_CONTINUE;
       }
       // Android can replace the surface after the first resize notification.
@@ -2328,7 +2431,11 @@ struct App
       if (dirty)
          render();
       else
+#ifndef __EMSCRIPTEN__
          SDL_Delay(12);
+#else
+         ;
+#endif
       if (smoke_frames > 0 && --smoke_frames == 0)
       {
          if (smoke_action_index != smoke_actions.size() || (smoke_expect_page && page != *smoke_expect_page))
@@ -2341,6 +2448,37 @@ struct App
    }
 };
 }  // namespace
+#ifdef __EMSCRIPTEN__
+extern "C" EMSCRIPTEN_KEEPALIVE void oneam_web_open(const char* path)
+{
+   if (auto* app = browser_app.load(); app && path)
+   {
+      std::lock_guard lock(app->inbox->mutex);
+      app->inbox->selected = path;
+      app->inbox->folder = false;
+   }
+}
+extern "C" EMSCRIPTEN_KEEPALIVE void oneam_web_resize(int width, int height)
+{
+   if (auto* app = browser_app.load(); app && width > 0 && height > 0)
+   {
+      std::lock_guard lock(app->inbox->mutex);
+      app->inbox->window_size = std::pair{width, height};
+   }
+}
+extern "C" EMSCRIPTEN_KEEPALIVE int oneam_web_page()
+{
+   return browser_page.load();
+}
+extern "C" EMSCRIPTEN_KEEPALIVE int oneam_web_rotation()
+{
+   return browser_rotation.load();
+}
+extern "C" EMSCRIPTEN_KEEPALIVE double oneam_web_zoom()
+{
+   return browser_zoom.load();
+}
+#endif
 SDL_AppResult SDL_AppInit(void** state, int argc, char** argv)
 {
    try
@@ -2352,6 +2490,10 @@ SDL_AppResult SDL_AppInit(void** state, int argc, char** argv)
          return SDL_APP_FAILURE;
       }
       app->resize();
+#ifdef __EMSCRIPTEN__
+      browser_app = app.get();
+      oneam::web_ready();
+#endif
       *state = app.release();
       return SDL_APP_CONTINUE;
    }
@@ -2387,6 +2529,9 @@ SDL_AppResult SDL_AppIterate(void* state)
 }
 void SDL_AppQuit(void* state, SDL_AppResult)
 {
+#ifdef __EMSCRIPTEN__
+   browser_app.store(nullptr);
+#endif
    delete static_cast<App*>(state);
    SDL_Quit();
 }

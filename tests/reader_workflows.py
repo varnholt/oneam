@@ -42,6 +42,7 @@ def main():
             ('library', 2, 'single,library,mark-read,filter-read,sort-title,search:Night', 2),
             ('metadata', 1, 'single,info', 1),
             ('next-book', 1, 'single,auto-next,last,next', 1),
+            ('per-book', 2, 'spread,rotate,trim,zoom-in,book:2,single,book:1', 2),
         ]
         env = os.environ | {'SDL_VIDEODRIVER': 'dummy', 'SDL_RENDER_DRIVER': 'software'}
         for name, start, actions, expected in scenarios:
@@ -57,6 +58,12 @@ def main():
             output = result.stdout + result.stderr
             if name == 'next-book' and 'Night Tales #2' not in output:
                 raise RuntimeError('automatic next book did not open the second archive')
+            if name == 'per-book':
+                views = [line for line in output.splitlines() if 'View: ' in line]
+                if not views or 'layout=1 rotation=1 zoom=1.20 trim=1' not in views[-1]:
+                    raise RuntimeError(f'per-book view was not restored:\n{output}')
+                if not any('layout=0 rotation=0 zoom=1.00 trim=0' in line for line in views):
+                    raise RuntimeError('book preferences leaked into a new book')
             print(f'{name}: passed', flush=True)
 
 

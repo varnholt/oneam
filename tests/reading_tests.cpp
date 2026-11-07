@@ -1,5 +1,7 @@
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <limits>
 #include <random>
 #include <stdexcept>
 #include "reading.hpp"
@@ -84,6 +86,27 @@ int main()
       require(!settings.save_progress(key, {12, 12, false}) && !settings.save_bookmarks("../escape", {1}), "saved-state bounds enforced");
       require(settings.save_preference("reader", "2 1 1") && settings.preference("reader") == "2 1 1", "reader preferences persist");
       require(!settings.save_preference("../escape", "value"), "preference paths constrained");
+      ViewSettings first;
+      first.layout = ReadingMode::Spread;
+      first.rotation = 3;
+      first.zoom = 1.75f;
+      first.trim = true;
+      first.fit_width = true;
+      first.controls_hidden = true;
+      first.tone.gamma = 1.2f;
+      const std::string second_key = "fedcba9876543210";
+      require(!settings.view(key), "new books use defaults until preferences are saved");
+      require(settings.save_view(key, first) && settings.save_view(second_key, {}), "per-book views save independently");
+      Settings restarted(root.string());
+      require(restarted.view(key) == first && restarted.view(second_key) == ViewSettings{}, "restarting restores each book's own view");
+      first.zoom = std::numeric_limits<float>::quiet_NaN();
+      require(!settings.save_view(key, first), "non-finite zoom rejected");
+      require(!settings.save_view("../escape", {}), "view paths constrained");
+      {
+         std::ofstream out(root / (key + ".view"));
+         out << "1 99 0 1 0 0 0 0 1 0 1 1";
+      }
+      require(!settings.view(key), "corrupt view settings fall back to defaults");
       std::filesystem::remove_all(root);
       std::cout << "Reading layouts, image adjustments, metadata and saved state passed.\n";
       return 0;

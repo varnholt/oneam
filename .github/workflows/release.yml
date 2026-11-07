@@ -1,0 +1,43 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to publish
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref_name }}
+      - name: Select verified binaries
+        id: build
+        run: python3 scripts/find_release_build.py
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.build.outputs.run_id }}
+          path: verified
+      - name: Package versioned downloads
+        run: python3 scripts/package_release.py verified release "$RELEASE_TAG"
+      - name: Publish release
+        shell: bash
+        run: |
+          extra=()
+          if [[ "$RELEASE_TAG" == *-* ]]; then extra+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" release/*.zip release/*.apk release/SHA256SUMS.txt \
+            --verify-tag --title "oneam ${RELEASE_TAG#v}" --notes-file release/notes.md "${extra[@]}"

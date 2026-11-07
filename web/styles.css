@@ -1,0 +1,11 @@
+@font-face{font-family:Noto;src:url(assets/NotoSans.ttf);font-display:swap}
+:root{color-scheme:dark;font-family:Noto,system-ui,sans-serif;background:#13161c;color:#e9eaed}
+*{box-sizing:border-box}body{margin:0;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+main{position:relative;flex:1;min-height:0}canvas{display:block;width:100%;height:100%;outline:none;touch-action:none}
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#13161c;gap:12px;padding:24px;text-align:center}
+#loading.hidden{display:none}.brand{width:56px;height:56px;stroke:#89c2b0;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+h1{font-weight:500;font-size:40px;letter-spacing:-1px;margin:0}p{margin:0;color:#9da4b3}#status{font-size:14px;margin-top:20px;max-width:480px}
+footer{display:flex;gap:12px;align-items:center;min-height:56px;padding:4px max(12px,env(safe-area-inset-right)) max(4px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:#191e27;flex-shrink:0;font-size:12px}
+button{font:inherit;font-size:13px;border:1px solid transparent;border-radius:8px;color:#e9eaed;background:#252d38;padding:10px 14px;min-height:44px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:8px}button:hover{background:#333e4c}button:disabled{opacity:.4;cursor:wait}
+button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}button:focus-visible,a:focus-visible{outline:2px solid #89c2b0;outline-offset:2px}a{color:#a9d6c6;text-underline-offset:3px;white-space:nowrap}#privacy{color:#9da4b3;flex:1}.fallback{margin-top:20px;font-size:14px}
+@media(max-width:700px){#privacy{display:none}footer{gap:8px}footer a{margin-left:auto}footer a:last-child{display:none}button{padding:8px 10px}}

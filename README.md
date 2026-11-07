@@ -2,7 +2,9 @@
 
 [![Build](https://github.com/varnholt/oneam/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/varnholt/oneam/actions/workflows/build.yml?query=branch%3Amaster)
 
-A small comic reader for Windows, Linux, macOS and Android. The reader uses C++23,
+[**Try in your browser**](https://varnholt.github.io/oneam/) · [**Download a release**](https://github.com/varnholt/oneam/releases)
+
+A small comic reader for Windows, Linux, macOS, Android and the browser. The reader uses C++23,
 SDL3 and one 7-Zip archive backend, both built from pinned source. Qt and bit7z
 are removed; no user-installed archive utility or plugin is required.
 
@@ -17,7 +19,11 @@ rendering axes always use the same scale to preserve the page's aspect ratio.
 
 ## Downloads
 
-Open the [latest successful master build](https://github.com/varnholt/oneam/actions/workflows/build.yml?query=branch%3Amaster+is%3Asuccess)
+Versioned binaries and SHA-256 checksums are on the [Releases page](https://github.com/varnholt/oneam/releases).
+Release downloads do not require signing in. Choose your operating system and architecture,
+then extract the desktop ZIP and keep its files together. Android downloads are debug-signed APKs.
+
+For development builds, open the [latest successful master build](https://github.com/varnholt/oneam/actions/workflows/build.yml?query=branch%3Amaster+is%3Asuccess)
 and download a package under **Artifacts**. GitHub requires signing in to download
 Actions artifacts. Unzip desktop packages and keep their files together.
 
@@ -31,8 +37,9 @@ Actions artifacts. Unzip desktop packages and keep their files together.
 | macOS Apple Silicon | `oneam-macOS-arm64` |
 | Android ARM64 phones/tablets | `oneam-Android-arm64-v8a-debug` |
 | Android x86_64 / emulators | `oneam-Android-x86_64-debug` |
+| Browser / self-hosting | `oneam-WebAssembly` |
 
-Android packages contain an installable debug APK. WebAssembly is not yet a supported target.
+Android packages contain an installable debug APK.
 
 ## Reading
 
@@ -85,8 +92,11 @@ only neighboring pages are loaded, rather than stitching an entire book into mem
 
 Margin trimming conservatively removes plain near-white or transparent borders,
 retaining a safety margin. It is reversible and never changes an archive. Rotation
-and brightness/contrast/gamma adjustments are also display-only. Reading modes,
-image adjustments and library sort/filter choices persist between sessions.
+and brightness/contrast/gamma adjustments are also display-only. Each book remembers
+its layout, manga direction, cover offset, zoom, rotation, trimming, fit mode,
+hidden controls and image adjustments. Switching books restores that book's own
+preferences; new books start with the default view. Library sort/filter choices
+and automatic next-book navigation are global preferences.
 
 The shelf shows unread, in-progress and finished states, with progress percentages.
 Search matches titles and filenames using Unicode case folding. Sort by title,
@@ -147,6 +157,48 @@ suite; Android builds ARM64 and x86_64 APKs independently.
 Debug APKs use optimized native decoding and are suitable for testing and sideloading. Release signing is deliberately
 left to the owner; no release credentials belong in the repository.
 
+## Browser preview
+
+[Open the live reader](https://varnholt.github.io/oneam/) and choose **Try a sample**,
+**Open comic**, or drop a supported archive onto it. The same C++ reader runs in
+WebAssembly, including background decoding, filtering and native vector controls.
+The included sample comic is drawn locally and contains no downloaded artwork.
+
+Comics are processed locally and are never uploaded. Imported books stay in the
+current tab's memory, with a 256 MiB limit per file and 512 MiB total per tab.
+Reading positions, bookmarks and preferences are saved in this browser's local
+storage. After reloading, reselect the same comic to resume it; clearing browser
+storage removes saved preferences. Private browsing or storage restrictions may
+prevent persistence.
+
+Use a recent browser with WebAssembly threads and OffscreenCanvas. GitHub Pages
+uses the bundled, dependency-free service worker to supply cross-origin isolation
+headers. It does not cache or upload comics. Hosts that support custom response
+headers can use `web/_headers`; the reader then skips the compatibility worker.
+
+To build and serve locally with Emscripten **6.0.1**:
+
+```sh
+emcmake cmake -S . -B build-web -DCMAKE_BUILD_TYPE=Release -DONEAM_BUILD_TESTS=OFF
+cmake --build build-web --parallel
+python scripts/serve_web.py build-web/web
+```
+
+Open `http://127.0.0.1:8080`. The server supplies the required isolation headers.
+For self-hosting, extract the WebAssembly release ZIP and serve its directory over
+HTTPS. The archive backend is a separate `oneam_archive.wasm` module; its matching
+source bundle includes instructions for rebuilding and replacing it.
+
+## Publishing releases
+
+Builds run for every branch. The master WebAssembly build automatically deploys the
+live preview through GitHub Pages. To publish a version, wait for a successful
+**Build** run of the exact commit, then push its matching `vX.Y.Z` tag. The **Release**
+workflow promotes those already-tested artifacts into named downloads and generates
+`SHA256SUMS.txt`; it refuses missing targets or a version that does not match CMake.
+Tags containing a suffix, such as `v2.0.0-beta.1`, create prereleases. The workflow
+can also be rerun manually for an existing tag.
+
 ## Limits and verification
 
 The main decoded page cache is capped at 128 MiB. Neighbor workers each have a
@@ -164,7 +216,7 @@ cannot seek may not support archive formats requiring random access.
 The regression suite covers ZIP/7z/tar reads, RAR4/RAR5 interoperability,
 ordering, corrupt input, cache eviction, canceled requests, fast book switching,
 metadata, spread pairing, image adjustments, margin detection, bookmarks and progress.
-When Python is available, generated comic fixtures also exercise nine complete
+When Python is available, generated comic fixtures also exercise ten complete
 application workflows with the SDL software renderer, including continuous-scroll
 boundaries and automatic next-book navigation.
 See [the audit](docs/AUDIT.md) for the original defects and fixes.

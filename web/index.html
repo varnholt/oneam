@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#13161c">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%2389c2b0' stroke-width='2' d='M3 5 8 4l4 2 4-2 5 1v15l-5-1-4 2-4-2-5 1ZM12 6v15'/%3E%3C/svg%3E">
+  <title>oneam — read a little later</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="reader" aria-label="Comic reader">
+    <canvas id="canvas" tabindex="0" aria-label="oneam comic reader"></canvas>
+    <section id="loading" role="status" aria-live="polite">
+      <svg class="brand" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5 8 4l4 2 4-2 5 1v15l-5-1-4 2-4-2-5 1Zm9 1v15"/></svg>
+      <h1>oneam</h1><p>Read a little later.</p>
+      <p id="status">Preparing your reader…</p>
+      <a class="fallback" href="https://github.com/varnholt/oneam/releases">Download the app</a>
+    </section>
+  </main>
+  <footer>
+    <button id="open" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V5h6l2 3h9v3M3 10h18l-3 10H3Z"/></svg>Open comic</button>
+    <button id="sample" disabled>Try a sample</button>
+    <span id="privacy">Local files. No uploads. Preferences stay on this device.</span>
+    <a href="https://github.com/varnholt/oneam/releases">Downloads</a>
+    <a href="https://github.com/varnholt/oneam">Source</a>
+  </footer>
+  <input id="file" type="file" accept=".cbz,.cbr,.cb7,.cbt,.zip,.rar,.7z,.tar" hidden>
+  <script src="sample.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

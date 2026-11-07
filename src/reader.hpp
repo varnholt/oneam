@@ -25,6 +25,26 @@ inline constexpr std::size_t cache_budget = 128 * 1024 * 1024;
 bool natural_less(std::string_view a, std::string_view b);
 bool is_image(std::string_view name);
 bool is_book(std::string_view name);
+enum class ReadingMode
+{
+   Single,
+   Spread,
+   Continuous
+};
+struct Tone
+{
+   float brightness = 0, contrast = 1, gamma = 1;
+   bool operator==(const Tone&) const = default;
+};
+struct ViewSettings
+{
+   ReadingMode layout = ReadingMode::Single;
+   bool manga = false, cover_alone = true, trim = false, fit_width = false, controls_hidden = false;
+   int rotation = 0;
+   float zoom = 1;
+   Tone tone;
+   bool operator==(const ViewSettings&) const = default;
+};
 struct Page
 {
    std::string name;
@@ -164,6 +184,8 @@ public:
    bool save_bookmarks(const std::string& key, std::vector<std::size_t> pages) const;
    std::string preference(const std::string& name) const;
    bool save_preference(const std::string& name, const std::string& value) const;
+   std::optional<ViewSettings> view(const std::string& key) const;
+   bool save_view(const std::string& key, const ViewSettings& view) const;
 
 private:
    std::string directory_;
