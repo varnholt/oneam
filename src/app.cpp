@@ -131,13 +131,13 @@ struct App {
     SDL_DestroyWindow(window);
   }
   bool init(int argc, char **argv) {
-    SDL_SetAppMetadata("one a.m.", "2.0.0", "com.varnholt.oneam");
+    SDL_SetAppMetadata("oneam", "2.0.0", "com.varnholt.oneam");
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
     SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
     if (!SDL_Init(SDL_INIT_VIDEO))
       return false;
-    if (!SDL_CreateWindowAndRenderer(
-            "one a.m.", 1100, 800, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY, &window, &renderer))
+    if (!SDL_CreateWindowAndRenderer("oneam", 1100, 800, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY,
+                                     &window, &renderer))
       return false;
     SDL_SetRenderVSync(renderer, 1);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -857,7 +857,7 @@ struct App {
         if (std::find(library.begin(), library.end(), source) == library.end())
           library.insert(library.begin(), source);
         const auto window_title = title(source) + "  |  " + std::to_string(page + 1) + " / " +
-                                  std::to_string(book->pages.size()) + "  |  one a.m.";
+                                  std::to_string(book->pages.size()) + "  |  oneam";
         SDL_SetWindowTitle(window, window_title.c_str());
         SDL_Log("Page %zu: %.2f ms%s", page + 1, result->milliseconds, result->cached ? " (cache)" : "");
       }
@@ -988,11 +988,8 @@ struct App {
     fill({safe_x, safe_y, safe_w, 72}, {25, 30, 39, 255});
     if (shelf) {
       ui::draw_icon(renderer, ui::Icon::Book, {safe_x + 20, safe_y + 22, 28, 28}, accent);
-      float brand_edge = safe_x + safe_w;
-      for (const auto &item : ui::toolbar(safe(), context()))
-        brand_edge = std::min(brand_edge, item.rect.x - 12);
-      if (brand_edge - (safe_x + 60) >= text->width("one a.m.", 27))
-        text->draw("one a.m.", safe_x + 60, safe_y + 22, 27, ink);
+      if (safe_w >= 320)
+        text->draw("oneam", safe_x + 60, safe_y + 22, 27, ink);
     }
     for (const auto &item : ui::toolbar(safe(), context()))
       control(item);
@@ -1124,7 +1121,7 @@ SDL_AppResult SDL_AppInit(void **state, int argc, char **argv) {
   try {
     auto app = std::make_unique<App>();
     if (!app->init(argc, argv)) {
-      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "one a.m.", SDL_GetError(), nullptr);
+      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "oneam", SDL_GetError(), nullptr);
       return SDL_APP_FAILURE;
     }
     app->resize();
