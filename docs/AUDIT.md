@@ -73,7 +73,7 @@ testing. Test comics and their images are not included in the repository or pack
 
 ## Dependency choice
 
-The final build uses SDL3 and one 7-Zip backend, plus two stb headers and a font.
+The final build uses SDL3 and one 7-Zip backend, plus three stb headers and a font.
 An initial libarchive implementation failed on 30 solid-RAR books in the real
 collection. Replacing that backend also removes separate zlib/liblzma build
 dependencies; no fallback decoder or external extraction command is used.
@@ -105,3 +105,19 @@ Rotation testing exposed late Android surface invalidation after the first resiz
 frame. A short redraw interval after resize/focus changes keeps that transition
 painted, then the renderer returns to its idle behavior. Smoke-test sessions use
 separate settings so visual checks do not alter the user's reading position.
+
+## Page proportions and downsampling
+
+Page destinations use the source aspect ratio and the renderer uses one uniform
+scale, including fractional display densities. Fit page, fit width, zoom and
+reading mode therefore preserve the original proportions.
+
+Reduced pages are filtered with the already pinned stb resize header's Mitchell
+kernel in linear light. A separate worker coalesces resize requests and publishes
+only the current page and size. The source texture remains usable during filtering;
+zooming and resizing do not extract the archive again. There is no new runtime
+dependency. Regression tests check alias suppression, color/alpha preservation,
+allocation bounds, unchanged source pixels and worker cancellation.
+
+Reading mode removes both bars, with a floating Controls button, center tap/click
+and Tab to restore them. The shared menu exposes the action at every screen size.

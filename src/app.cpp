@@ -1,6 +1,7 @@
 #define SDL_MAIN_USE_CALLBACKS 1
 #include <SDL3/SDL_main.h>
 #include "reader.hpp"
+#include "scaler.hpp"
 #include "text.hpp"
 #include "controls.hpp"
 #include "icons.hpp"
@@ -91,6 +92,11 @@ struct App {
   std::shared_ptr<const Book> book;
   std::shared_ptr<const Image> image;
   Texture texture;
+  Texture filtered_texture;
+  PageScaler scaler;
+  int filter_w = 0, filter_h = 0;
+  bool filter_requested = false, controls_hidden = false;
+  std::uint64_t filter_due = 0;
   std::string source, key, error, notice;
   std::vector<std::string> library;
   std::unordered_map<std::string, Texture> thumbnails;
@@ -110,9 +116,11 @@ struct App {
   float second_x = 0, second_y = 0;
   float safe_x = 0, safe_y = 0, safe_w = 1000, safe_h = 760;
   float ui_scale = 1;
+  float render_scale = 1, input_x = 1, input_y = 1;
   std::uint64_t last_tick = 0;
   std::uint64_t redraw_until = 0;
   int smoke_frames = 0;
+  std::optional<std::size_t> smoke_page;
   std::string smoke_output;
   std::string startup_source;
   std::string prefs;
@@ -124,6 +132,7 @@ struct App {
     covers.reset();
     reader.reset();
     texture.reset();
+    filtered_texture.reset();
     thumbnails.clear();
     text.reset();
     SDL_DestroyCursor(hand_cursor);
@@ -179,6 +188,10 @@ struct App {
         smoke_frames = 180;
       } else if (arg == "--smoke-menu")
         smoke_menu = true;
+      else if (arg == "--smoke-reading")
+        controls_hidden = true;
+      else if (arg == "--smoke-page" && i + 1 < argc)
+        smoke_page = static_cast<std::size_t>(std::max(1, std::stoi(argv[++i])) - 1);
       else if (arg == "--smoke-help")
         smoke_help = true;
       else if (arg == "--size" && i + 2 < argc) {
@@ -216,9 +229,11 @@ struct App {
     menu_open = help = false;
     source = path;
     key = book_key(source);
-    page = settings->position(key);
+    page = smoke_frames && smoke_page ? *smoke_page : settings->position(key);
     book.reset();
     image.reset();
+    scaler.clear();
+    filtered_texture.reset();
     texture.reset();
     shelf = false;
     error.clear();
@@ -271,26 +286,31 @@ struct App {
     SDL_GetWindowSize(window, &w, &h);
     ui_scale =
         std::max(1.f, SDL_GetWindowDisplayScale(window) / std::max(.1f, SDL_GetWindowPixelDensity(window)));
-    width = static_cast<float>(std::max(w, 1)) / ui_scale;
-    height = static_cast<float>(std::max(h, 1)) / ui_scale;
+    int pixels_w = 0, pixels_h = 0;
+    SDL_GetRenderOutputSize(renderer, &pixels_w, &pixels_h);
+    // One scalar on both axes preserves page proportions even at fractional DPI.
+    render_scale = std::max(.1f, SDL_GetWindowPixelDensity(window)) * ui_scale;
+    width = std::max(pixels_w, 1) / render_scale;
+    height = std::max(pixels_h, 1) / render_scale;
+    input_x = width / std::max(w, 1);
+    input_y = height / std::max(h, 1);
     SDL_Rect area{};
     if (!SDL_GetWindowSafeArea(window, &area))
       area = {0, 0, w, h};
-    safe_x = static_cast<float>(area.x) / ui_scale;
-    safe_y = static_cast<float>(area.y) / ui_scale;
-    safe_w = static_cast<float>(area.w) / ui_scale;
-    safe_h = static_cast<float>(area.h) / ui_scale;
-    int pixels_w = 0, pixels_h = 0;
-    SDL_GetRenderOutputSize(renderer, &pixels_w, &pixels_h);
-    SDL_SetRenderScale(renderer, pixels_w / width, pixels_h / height);
+    safe_x = area.x * input_x;
+    safe_y = area.y * input_y;
+    safe_w = area.w * input_x;
+    safe_h = area.h * input_y;
+    SDL_SetRenderScale(renderer, render_scale, render_scale);
     scroll_target = std::clamp(scroll_target, 0.f, shelf_max());
     scroll = std::clamp(scroll, 0.f, shelf_max());
     clamp_pan();
     dirty = true;
     redraw_until = SDL_GetTicks() + 400;
   }
-  float top() const { return safe_y + 72; }
-  float bottom() const { return safe_y + safe_h - 72; }
+  bool reading_mode() const { return !shelf && controls_hidden; }
+  float top() const { return safe_y + (reading_mode() ? 0 : 72); }
+  float bottom() const { return safe_y + safe_h - (reading_mode() ? 0 : 72); }
   float view_height() const { return std::max(1.f, bottom() - top()); }
   float base_scale() const {
     if (!image)
@@ -355,7 +375,8 @@ struct App {
             book && page > 0,
             book && page + 1 < book->pages.size(),
             bool(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN),
-            fit_width};
+            fit_width,
+            reading_mode()};
   }
   SDL_FRect help_panel() const {
     const float w = std::min(safe_w - 24, 560.f), h = std::min(safe_h - 92, 440.f);
@@ -374,6 +395,7 @@ struct App {
     const std::array paragraphs{"Choose Open to pick a comic.",
                                 "Use the bottom arrows to turn pages, or swipe across the page.",
                                 "Pinch to zoom. Drag to pan or scroll.",
+                                "Tap the page center to hide the bars. Controls brings them back.",
                                 "Menu contains zoom, first and last page, fit modes and fullscreen.",
                                 "Choose Library or Android Back to return to your books.",
                                 "Scroll this panel to read more."};
@@ -382,6 +404,7 @@ struct App {
         "Open a book with Open or Ctrl+O. Folder opens your library directory.",
         "Use the bottom arrows or Left / Right to turn pages. Home / End jumps to the first / last page.",
         "Use the mouse wheel or drag to scroll. Ctrl+wheel zooms.",
+        "Read or Tab hides the bars. Click the page center or Controls to bring them back.",
         "Menu contains every reader command, including zoom, reset, fit modes and fullscreen.",
         "F11 toggles fullscreen. F1 opens help. Escape closes a panel or returns to the library.",
         "Keyboard shortcuts are optional. Every command is available with the mouse."};
@@ -448,13 +471,20 @@ struct App {
         help = false;
       else if (menu_open)
         menu_open = false;
-      else
+      else if (reading_mode()) {
+        controls_hidden = false;
+        clamp_pan();
+      } else
         shelf = true;
       dirty = true;
       return;
     }
     menu_open = false;
     switch (action) {
+    case A::ReadingMode:
+      controls_hidden = !controls_hidden;
+      clamp_pan();
+      break;
     case A::Open:
       dialog();
       break;
@@ -581,6 +611,8 @@ struct App {
         perform(ui::Action::Previous);
       else if (x > safe_x + safe_w * .75f)
         perform(ui::Action::Next);
+      else
+        perform(ui::Action::ReadingMode);
     }
   }
   void keydown(const SDL_KeyboardEvent &event) {
@@ -590,8 +622,9 @@ struct App {
       return;
     }
     if (auto action = ui::keyboard(event.key, event.mod, !shelf)) {
-      if (event.repeat && (*action == ui::Action::Open || *action == ui::Action::Help ||
-                           *action == ui::Action::Fullscreen || *action == ui::Action::Back))
+      if (event.repeat &&
+          (*action == ui::Action::Open || *action == ui::Action::Help || *action == ui::Action::Fullscreen ||
+           *action == ui::Action::ReadingMode || *action == ui::Action::Back))
         return;
       perform(*action);
       return;
@@ -621,13 +654,13 @@ struct App {
   }
   SDL_AppResult event(SDL_Event &event) {
     if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
-      event.button.x /= ui_scale;
-      event.button.y /= ui_scale;
+      event.button.x *= input_x;
+      event.button.y *= input_y;
     } else if (event.type == SDL_EVENT_MOUSE_MOTION) {
-      event.motion.x /= ui_scale;
-      event.motion.y /= ui_scale;
-      event.motion.xrel /= ui_scale;
-      event.motion.yrel /= ui_scale;
+      event.motion.x *= input_x;
+      event.motion.y *= input_y;
+      event.motion.xrel *= input_x;
+      event.motion.yrel *= input_y;
     }
     switch (event.type) {
     case SDL_EVENT_QUIT:
@@ -672,6 +705,9 @@ struct App {
       resize();
       break;
     case SDL_EVENT_LOW_MEMORY:
+      scaler.clear();
+      filtered_texture.reset();
+      filter_w = filter_h = 0;
       thumbnails.clear();
       reader->trim_cache();
       covers->trim_cache();
@@ -791,6 +827,9 @@ struct App {
     return SDL_APP_CONTINUE;
   }
   void upload() {
+    scaler.clear();
+    filtered_texture.reset();
+    filter_w = filter_h = 0;
     texture.reset();
     if (!image)
       return;
@@ -803,6 +842,36 @@ struct App {
     }
     SDL_SetTextureBlendMode(texture.get(), SDL_BLENDMODE_BLEND);
     SDL_SetTextureScaleMode(texture.get(), SDL_SCALEMODE_LINEAR);
+  }
+  void filter_page() {
+    if (shelf || !image || !texture)
+      return;
+    const float scale = std::min(1.f, base_scale() * zoom * render_scale);
+    const int w = std::max(1, static_cast<int>(std::round(image->width * scale)));
+    const int h = std::max(1, static_cast<int>(std::round(image->height * scale)));
+    if (w != filter_w || h != filter_h) {
+      scaler.clear();
+      filter_w = w;
+      filter_h = h;
+      filter_requested = false;
+      filter_due = SDL_GetTicks() + 70;
+      if (scale >= 1)
+        filtered_texture.reset();
+    }
+    if (scale < 1 && !filter_requested && SDL_GetTicks() >= filter_due) {
+      scaler.request(image, w, h);
+      filter_requested = true;
+    }
+    if (auto result = scaler.poll();
+        result && result->source == image && result->image.width == w && result->image.height == h) {
+      Texture next(SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, w, h));
+      if (next && SDL_UpdateTexture(next.get(), nullptr, result->image.pixels.data(), w * 4)) {
+        SDL_SetTextureScaleMode(next.get(), SDL_SCALEMODE_LINEAR);
+        SDL_SetTextureBlendMode(next.get(), SDL_BLENDMODE_BLEND);
+        filtered_texture = std::move(next);
+        dirty = true;
+      }
+    }
   }
   void tick() {
     {
@@ -892,6 +961,7 @@ struct App {
       dirty = true;
     }
     const auto now = SDL_GetTicks();
+    filter_page();
     const auto dt = std::min(.05f, (now - last_tick) / 1000.f);
     last_tick = now;
     if (std::abs(scroll_target - scroll) > .1f) {
@@ -985,14 +1055,13 @@ struct App {
   void render() {
     SDL_SetRenderDrawColor(renderer, 19, 22, 28, 255);
     SDL_RenderClear(renderer);
-    fill({safe_x, safe_y, safe_w, 72}, {25, 30, 39, 255});
+    if (!reading_mode())
+      fill({safe_x, safe_y, safe_w, 72}, {25, 30, 39, 255});
     if (shelf) {
       ui::draw_icon(renderer, ui::Icon::Book, {safe_x + 20, safe_y + 22, 28, 28}, accent);
       if (safe_w >= 320)
         text->draw("oneam", safe_x + 60, safe_y + 22, 27, ink);
     }
-    for (const auto &item : ui::toolbar(safe(), context()))
-      control(item);
     SDL_Rect clip{static_cast<int>(safe_x), static_cast<int>(top()), static_cast<int>(safe_w),
                   static_cast<int>(view_height())};
     SDL_SetRenderClipRect(renderer, &clip);
@@ -1002,7 +1071,8 @@ struct App {
       const float scale = base_scale() * zoom, w = image->width * scale, h = image->height * scale;
       SDL_FRect destination{safe_x + (safe_w - w) * .5f + pan_x,
                             top() + std::max(0.f, (view_height() - h) * .5f) - pan_y, w, h};
-      SDL_RenderTexture(renderer, texture.get(), nullptr, &destination);
+      SDL_RenderTexture(renderer, filtered_texture ? filtered_texture.get() : texture.get(), nullptr,
+                        &destination);
     }
     if (!shelf && (busy || !error.empty())) {
       fill({safe_x + 20, top() + 22, safe_w - 40, 78}, {35, 40, 50, 245});
@@ -1012,12 +1082,15 @@ struct App {
                  safe_w - 72);
     }
     SDL_SetRenderClipRect(renderer, nullptr);
-    fill({safe_x, bottom(), safe_w, 72}, {25, 30, 39, 255});
+    for (const auto &item : ui::toolbar(safe(), context()))
+      control(item);
+    if (!reading_mode())
+      fill({safe_x, bottom(), safe_w, 72}, {25, 30, 39, 255});
     if (shelf) {
       ui::draw_icon(renderer, ui::Icon::Book, {safe_x + 20, bottom() + 24, 24, 24}, muted);
       const auto count = std::to_string(library.size()) + (library.size() == 1 ? " book" : " books");
       text->draw(notice.empty() ? count : notice, safe_x + 56, bottom() + 27, 18, muted, safe_w - 76);
-    } else {
+    } else if (!reading_mode()) {
       const auto buttons = ui::navigation(safe(), context());
       for (const auto &item : buttons)
         control(item);

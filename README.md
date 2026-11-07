@@ -7,6 +7,9 @@ are removed; no user-installed archive utility or plugin is required.
 Open a book, turn the page, and return to the same place next time. Reading and
 image decoding run in the background. Adjacent pages are prefetched into a bounded
 cache, and resizing reuses the current image instead of extracting it again.
+Reduced pages use background Mitchell filtering in linear light to prevent jagged
+text and line art. The original pixels remain available for zooming, and both
+rendering axes always use the same scale to preserve the page's aspect ratio.
 
 ## Reading
 
@@ -29,6 +32,7 @@ cache, and resizing reuses the current image instead of extracting it again.
 | Zoom | Menu; Ctrl+wheel, + / - | Menu or pinch |
 | Reset zoom | Menu; 0 | Menu |
 | Fit page / fit width | Menu; W | Menu |
+| Hide / show bars | Read, Menu or Tab; click the page center | Menu or tap the page center |
 | Shelf | Library or Escape | Library or Android Back |
 | Select a shelf book | Arrow keys, Enter | Tap a cover |
 | Fullscreen | Menu; F11 | Menu |
@@ -36,6 +40,8 @@ cache, and resizing reuses the current image instead of extracting it again.
 
 All keyboard commands have visible mouse and touch equivalents. The shared
 controls menu scrolls on small screens, and its help and close buttons stay fixed.
+A floating **Controls** button stays available when the bars are hidden. Escape
+or Android Back restores the bars before returning to the shelf.
 Buttons use vector icons, clear disabled/active/hover states and touch targets
 of at least 48 logical pixels. No icon fonts or image libraries are required.
 

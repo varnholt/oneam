@@ -72,7 +72,7 @@ void parity_test(Context context) {
   const std::array keys{SDLK_RIGHT, SDLK_LEFT,    SDLK_PAGEDOWN, SDLK_PAGEUP,   SDLK_SPACE,
                         SDLK_HOME,  SDLK_END,     SDLK_UP,       SDLK_DOWN,     SDLK_EQUALS,
                         SDLK_PLUS,  SDLK_KP_PLUS, SDLK_MINUS,    SDLK_KP_MINUS, SDLK_0,
-                        SDLK_W,     SDLK_F1,      SDLK_F11,      SDLK_ESCAPE};
+                        SDLK_W,     SDLK_F1,      SDLK_F11,      SDLK_ESCAPE,   SDLK_TAB};
   for (auto key : keys)
     if (auto action = keyboard(key, SDL_KMOD_NONE, context.reading)) {
       if (*action == Action::Back)
@@ -96,6 +96,16 @@ int main() {
         for (int width = 240; width <= 1100; width += 4)
           layout_test({0, 0, static_cast<float>(width), 640}, context);
         parity_test(context);
+        if (reading) {
+          context.controls_hidden = true;
+          for (int width = 240; width <= 1100; width += 4)
+            layout_test({0, 0, static_cast<float>(width), 640}, context);
+          require(navigation({0, 0, 360, 640}, context).empty(), "reading mode hides footer controls");
+          auto floating = toolbar({0, 0, 360, 640}, context);
+          require(floating.size() == 1 && floating.front().action == Action::ReadingMode,
+                  "reading mode always has a visible mouse/touch exit");
+          parity_test(context);
+        }
       }
     Context empty;
     require(!enabled(Action::First, empty) && !enabled(Action::ResetZoom, empty),

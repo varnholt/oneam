@@ -22,6 +22,7 @@ enum class Action {
   FitPage,
   FitWidth,
   ToggleFit,
+  ReadingMode,
   Fullscreen,
   Help,
   ScrollUp,
@@ -53,6 +54,7 @@ enum class Icon {
 struct Context {
   bool reading = false, book = false, image = false, folders = true;
   bool previous = false, next = false, fullscreen = false, fit_width = false;
+  bool controls_hidden = false;
 };
 struct Control {
   Action action = Action::None;

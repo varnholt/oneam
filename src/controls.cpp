@@ -20,6 +20,8 @@ bool enabled(Action a, const Context &c) {
   case Action::FitWidth:
   case Action::ToggleFit:
     return c.reading && c.image;
+  case Action::ReadingMode:
+    return c.reading;
   case Action::First:
   case Action::Last:
     return c.book;
@@ -58,6 +60,8 @@ Icon icon(Action a, const Context &c) {
     return Icon::FitWidth;
   case Action::Fullscreen:
     return c.fullscreen ? Icon::Collapse : Icon::Expand;
+  case Action::ReadingMode:
+    return c.controls_hidden ? Icon::Menu : Icon::Book;
   case Action::Help:
     return Icon::Help;
   case Action::Close:
@@ -101,6 +105,8 @@ std::string_view label(Action a, const Context &c) {
     return "Fit width";
   case Action::Fullscreen:
     return c.fullscreen ? "Exit fullscreen" : "Fullscreen";
+  case Action::ReadingMode:
+    return c.controls_hidden ? "Show controls" : "Hide controls";
   case Action::Help:
     return "Help";
   case Action::Close:
@@ -117,6 +123,8 @@ std::string_view label(Action a, const Context &c) {
 }
 std::string_view shortcut(Action a) {
   switch (a) {
+  case Action::ReadingMode:
+    return "Tab";
   case Action::Open:
     return "Ctrl+O";
   case Action::First:
@@ -156,6 +164,8 @@ std::optional<Action> keyboard(SDL_Keycode key, SDL_Keymod mods, bool reading) {
   if (!reading)
     return {};
   switch (key) {
+  case SDLK_TAB:
+    return Action::ReadingMode;
   case SDLK_RIGHT:
   case SDLK_PAGEDOWN:
   case SDLK_SPACE:
@@ -195,6 +205,11 @@ Control control(Action a, SDL_FRect r, const Context &c) {
 std::vector<Control> toolbar(SDL_FRect safe, const Context &c) {
   std::vector<Control> result;
   float right = safe.x + safe.w - 12;
+  if (c.reading && c.controls_hidden) {
+    auto restore = control(Action::ReadingMode, {right - 136, safe.y + 12, 136, 48}, c);
+    restore.label = "Controls";
+    return {restore};
+  }
   const float menu_width = safe.w >= 300 ? 104.f : 48.f;
   auto menu = control(Action::Menu, {right - menu_width, safe.y + 12, menu_width, 48}, c);
   if (menu_width == 48)
@@ -217,11 +232,16 @@ std::vector<Control> toolbar(SDL_FRect safe, const Context &c) {
     if (w == 48)
       library.label = {};
     result.push_back(library);
+    if (safe.w >= 540) {
+      auto read = control(Action::ReadingMode, {safe.x + 132, safe.y + 12, 136, 48}, c);
+      read.label = "Read";
+      result.push_back(read);
+    }
   }
   return result;
 }
 std::vector<Control> navigation(SDL_FRect safe, const Context &c) {
-  if (!c.reading)
+  if (!c.reading || c.controls_hidden)
     return {};
   const float w = safe.w >= 460 ? 128.f : 56.f;
   auto previous = control(Action::Previous, {safe.x + 12, safe.y + safe.h - 60, w, 48}, c);
@@ -234,8 +254,8 @@ MenuLayout menu(SDL_FRect safe, const Context &c, float scroll) {
   MenuLayout result;
   std::vector<Action> actions;
   if (c.reading)
-    actions = {Action::Previous, Action::Next,      Action::First,   Action::Last,    Action::ZoomOut,
-               Action::ZoomIn,   Action::ResetZoom, Action::FitPage, Action::FitWidth};
+    actions = {Action::ReadingMode, Action::Previous, Action::Next,      Action::First,   Action::Last,
+               Action::ZoomOut,     Action::ZoomIn,   Action::ResetZoom, Action::FitPage, Action::FitWidth};
   else
     actions = {Action::First, Action::Last};
   actions.insert(actions.end(), {Action::ScrollUp, Action::ScrollDown, Action::Library, Action::Open});
